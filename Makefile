@@ -15,15 +15,15 @@
 CC=g++
 
 # Parameters of compilation.
-CFLAGS=-std=c++11 -pedantic -W -Wall -Wextra -O2
+CFLAGS=-std=c++11 -pedantic -W -Wall -Wextra -O2 -lsimlib -lm
 
 # Default rule for creating all required files:
 all: IMS2013
 
 ############################################################
 
-IMS2013: choko_fact_sim.cc choko_fact_sim.hh
-	$(CC) $(CFLAGS) choko_fact_sim.cc $@
+IMS2013: choco_fact_sim.cc
+	$(CC) $(CFLAGS) choco_fact_sim.cc -o $@
 
 ############################################################
 # Other useful stuff:
