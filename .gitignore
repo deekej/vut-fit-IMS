@@ -1,0 +1,6 @@
+# This file defines types of files specific to this project which 'git add'
+# should ignore.
+
+# Ignoring shared DROPBOX folder + project binary files:
+Dropbox
+IMS2013
