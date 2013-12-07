@@ -39,12 +39,15 @@
  * *********************************************************************************************************************************************************** */
 
 /* C++ header files. */
+#include <fstream>
 #include <iostream>
+#include <istream>
 #include <sstream>
 #include <string>
 
 /* C header files. */
-#include <cstdblib>
+#include <cstdlib>
+#include <ctime>
 
 /* SimLib/C++ header file. */
 #include <simlib.h>
@@ -90,8 +93,19 @@ void display_help(const char *prg_name)
  ~ ~~~[ MAIN FUNCTION ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
  * *********************************************************************************************************************************************************** */
 
-int main(int argc, char *argv[])
+int main(void)
 {{{
+  long seed_value;
+  std::ifstream seed;
+  
+  seed.open("/dev/urandom", std::ifstream::binary);
+  seed.read(reinterpret_cast<char *>(&seed_value), sizeof(long));
+
+  RandomSeed(seed_value);
+
+
+
+  seed.close();
 
   return EXIT_SUCCESS;
 }}}
