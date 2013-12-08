@@ -97,11 +97,19 @@ enum machine_type {
   CONCHING,
   TEMPERING,
   MOLDING,
+  PACKING,
 };
 
+
 enum gauss_params {
-  MEAN_VAL,
+  MEAN_VAL = 0,
   DISPER,
+};
+
+
+enum operation_time {
+  MIN = 0,
+  MAX,
 };
 
 
@@ -127,6 +135,28 @@ double store_occupancy[][2] = {
 
 
 /**
+ * Minimal and maximal values of machine operation time - for use with Uniform()
+ * function.
+ */
+double machine_oper_time[][2] = {
+  {25, 50},     /* Cleaning. */
+  {30, 120},    /* Roasting. */
+  {15, 25},     /* Shelling. */
+  {20, 30},     /* Grinding. */
+  {60, 120},    /* Refining. */
+  {30, 60},     /* Defatting. */
+  {10, 20},     /* Cake grinding. */
+  {60, 90},     /* Remixing. */
+  {1440, 4320}, /* Conching. */
+  {120, 180},   /* Tempering. */
+  
+  /* Safety mechanism - molding & packing values are result of function. Use that! */
+  {0,0},
+  {0,0},
+};
+
+
+/**
  * Maintenance times (in minutes) for each batch facility used in batch
  * process. 1st value is equal to mean value, 2nd value is equal to
  * dispersion value - both used for normal (Gauss) distribution.
@@ -145,12 +175,20 @@ double maintenance_times[][2] = {
   {30, 5},      /* Molding. */
 };
 
-
 static const double NEW_ORDER_WHITE_CHANCE = 13;
 static const double NEW_ORDER_MILK_CHANCE = NEW_ORDER_WHITE_CHANCE + 49;
 
+static const double MOLDING_FORM_SIZE = 5;              /* Number of pieces processed at once. */
+static const double MOLDING_COOLING_TIME = 30;          /* Time in minutes. */
+
+static const double PACKING_PIECES_SIMULTANEOUSLY = 5;  /* Number of pieces simultaneously.*/
+static const double PACKING_UNIT_TIME = 2;              /* Time in minutes to pack number of pieces defined above. */
+
 // }}}  -  End of folding marker.
 
+/* *********************************************************************************************************************************************************** *
+ ~ ~~~[ QUEUES ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
+ * *********************************************************************************************************************************************************** */
 
 /* *********************************************************************************************************************************************************** *
  ~ ~~~[ PROCESSES & FACILITIES ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
@@ -313,7 +351,7 @@ void machine_maintenance::Behavior(void)
 // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 
 /*
- * Global instances of other facilities, used during new batch process.
+ * Global instances of machines (facilities) used during the new batch process.
  */
 machine cleaning("Cleaning of chocolate beans", CLEANING, 1);
 machine roasting("Roasting of chocolate beans", ROASTING, 1);
@@ -366,13 +404,29 @@ class order : public Process {
  */
 class batch : public Process {
   private:
-    unsigned quantity;
+    unsigned quantity;                /* Kilograms of chocolate generated. */
     enum chocolate_type batch_type;
 
   public:
     void Behavior(void)
     {{{
+    // TODO: Finish this!
+    }}}
 
+    /**
+     * Defines time spend in molding process gained upon quantity generated.
+     */
+    double molding_time(void)
+    {{{
+      return (this->quantity / MOLDING_FORM_SIZE) + MOLDING_COOLING_TIME;
+    }}}
+    
+    /**
+     * Defines time spend in packing process gained upon quantity generated.
+     */
+    double packing_time(void)
+    {{{
+      return (this->quantity / PACKING_PIECES_SIMULTANEOUSLY) * 2;
     }}}
 };
 
@@ -445,7 +499,7 @@ int main(int argc, char* argv[])
     return EXIT_FAILURE;
   }
 
-  // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
+  // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 
   long seed_value;
   std::ifstream seed;
@@ -455,7 +509,7 @@ int main(int argc, char* argv[])
   seed.read(reinterpret_cast<char *>(&seed_value), sizeof(long));
   RandomSeed(seed_value);
 
-  // // // // // // // // // // // // // // // // // // // // // // /
+  // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 
   seed.close();
 
