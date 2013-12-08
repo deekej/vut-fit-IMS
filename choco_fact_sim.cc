@@ -41,13 +41,11 @@
 /* C++ header files. */
 #include <fstream>
 #include <iostream>
-#include <istream>
-#include <sstream>
 #include <string>
 
 /* C header files. */
 #include <cstdlib>
-#include <ctime>
+#include <cstring>
 
 /* SimLib/C++ header file. */
 #include <simlib.h>
@@ -77,13 +75,18 @@
 
 void display_help(const char *prg_name)
 {{{
-  std::cout << prg_name << " - implementation of stochastic simulation of hypothetical chocolate factory queuing system." << std::endl;
-  std::cout << "This is the result of team project of IMS course in year 2013 @ Faculty of Information Technology," << std::endl;
-  std::cout << "Brno University of Technology, Czech Republic.\n" << std::endl;
-  std::cout << "Authors:\tDaniela Srubarova (aka Aileen)" << std::endl;
+  std::cout << prg_name << " - implementation of stochastic simulation of hypothetical chocolate" << std::endl;
+  std::cout << "factory queuing system. This is the result of team project of IMS course in" << std::endl;
+  std::cout << "year 2013 @ Faculty of Information Technology, Brno University of Technology," << std::endl;
+  std::cout << "Czech Republic.\n" << std::endl;
+  std::cout << "Authors:\tDaniela Srubarova (aka Aileen) [team-leader]" << std::endl;
   std::cout << "\t\tDavid Kaspar (aka Dee'Kej)\n" << std::endl;
   std::cout << "Contact:\txsruba01@stud.fit.vutbr.cz" << std::endl;
-  std::cout << "\t\txkaspa34@stud.fit.vutbr.cz" << std::endl;
+  std::cout << "\t\txkaspa34@stud.fit.vutbr.cz\n" << std::endl;
+  std::cout << "This program is based upon SimLib/C++ (version 3) simulation library." << std::endl;
+  std::cout << "If you want to start the simulation and see the results, run this program" << std::endl;
+  std::cout << "without any parameters.\n" << std::endl;
+  std::cout << "For more info visit: http://perchta.fit.vutbr.cz:8000/vyuka-ims/31" << std::endl;
 
   return;  
 }}}
@@ -93,14 +96,28 @@ void display_help(const char *prg_name)
  ~ ~~~[ MAIN FUNCTION ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
  * *********************************************************************************************************************************************************** */
 
-int main(void)
+int main(int argc, char* argv[])
 {{{
+  
+  /* Any parameter used? */
+  if (argc > 1) {
+    display_help(argv[0]);
+
+    if ((strcmp(argv[1],"-h") == 0) || (strcmp(argv[1], "--help") == 0)) {
+      return EXIT_SUCCESS;  
+    }
+    
+    return EXIT_FAILURE;
+  }
+
+  // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
+
   long seed_value;
   std::ifstream seed;
   
   seed.open("/dev/urandom", std::ifstream::binary);
-  seed.read(reinterpret_cast<char *>(&seed_value), sizeof(long));
 
+  seed.read(reinterpret_cast<char *>(&seed_value), sizeof(long));
   RandomSeed(seed_value);
 
 
