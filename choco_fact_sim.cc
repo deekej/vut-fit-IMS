@@ -104,62 +104,77 @@ static const double NEW_ORDER_MILK_CHANCE = NEW_ORDER_WHITE_CHANCE + 49;
 
 class storehouse : public Facility {
   private:
-    unsigned max_capacity;
-    unsigned act_capacity;
-    enum chocolate_type store_type;
+    unsigned max_capacity;                      /* Maximum capacity of this store. */
+    unsigned act_capacity;                      /* Actual capacity of this store */
+    enum chocolate_type store_type;             /* Type of chocolate stored here. */
 
   public:
-
 #if 0
-  storehouse(enum chocolate_type type, unsigned max_cap, unsigned init_cap) : Facility()
-  {{{
-    this->store_type = type;
-    this->max_capacity = max_cap;
-    this->act_capacity = init_cap;
-  }}}
+    storehouse(enum chocolate_type type, unsigned max_cap, unsigned init_cap) : Facility()
+    {{{
+      this->store_type = type;
+      this->max_capacity = max_cap;
+      this->act_capacity = init_cap;
+    }}}
 #endif
 
-  storehouse(const char *name, enum chocolate_type type, unsigned max_cap, unsigned init_cap) : Facility(name)
-  {{{
-    this->store_type = type;
-    this->max_capacity = max_cap;
-    this->act_capacity = init_cap;
-  }}}
+
+    storehouse(const char *name, enum chocolate_type type, unsigned max_cap, unsigned init_cap) : Facility(name)
+    {{{
+      this->store_type = type;
+      this->max_capacity = max_cap;
+      this->act_capacity = init_cap;
+    }}}
+
 
 #if 0
-  storehouse(const char *name, Queue *q, enum chocolate_type type, unsigned max_cap, unsigned init_cap) : Facility(name, q)
-  {{{
-    this->store_type = type;
-    this->max_capacity = max_cap;
-    this->act_capacity = init_cap;
-  }}}
+    storehouse(const char *name, Queue *q, enum chocolate_type type, unsigned max_cap, unsigned init_cap) : Facility(name, q)
+    {{{
+      this->store_type = type;
+      this->max_capacity = max_cap;
+      this->act_capacity = init_cap;
+    }}}
 #endif
 
-  int withdraw(unsigned amount)
-  {{{
-    if (amount > this->max_capacity) {
-      std::cerr << "SIMULATION ERROR: Order is not allowed to withdraw bigger from storehouse" << std::endl;
-      std::cerr << "                  than is current maximum capacity!" << std::endl;
-      std::cerr << "                  Please, FIX your simulation PARAMETERS." << std::endl;
+    /**
+     * Only way how to access private member of this class and increase actual capacity.
+     */
+    void deposit(unsigned amount)
+    {{{
+      this->act_capacity += amount;
 
-      exit(EXIT_FAILURE);
-    }
-    else if (amount > this->act_capacity) {
-      return EXIT_FAILURE;            /* This amount can't be currently withdraw. */
-    }
+      return;
+    }}}
 
-    this->act_capacity -= amount;
-  
-    double percentage = static_cast<double>(this->act_capacity) / static_cast<double>(this->max_capacity) * 100;
 
-    if (percentage < store_occupancy[this->store_type][MIN_OCCUPANCY]) {
-    }
+    int withdraw(unsigned amount)
+    {{{
+      if (amount > this->max_capacity) {
+        std::cerr << "SIMULATION ERROR: Order is not allowed to withdraw bigger from storehouse" << std::endl;
+        std::cerr << "                  than is current maximum capacity!" << std::endl;
+        std::cerr << "                  Please, FIX your simulation PARAMETERS." << std::endl;
 
-    if (percentage < store_occupancy[this->store_type][ADEQUATE_OCCUPANCY]) {
-    }
+        exit(EXIT_FAILURE);
+      }
+      else if (amount > this->act_capacity) {
+        return EXIT_FAILURE;            /* This amount can't be currently withdraw. */
+      }
 
-    // TODO:
-  }}}
+      this->act_capacity -= amount;
+    
+      double percentage = static_cast<double>(this->act_capacity) / static_cast<double>(this->max_capacity) * 100;
+
+      if (percentage < store_occupancy[this->store_type][MIN_OCCUPANCY]) {
+
+      }
+
+      if (percentage < store_occupancy[this->store_type][ADEQUATE_OCCUPANCY]) {
+      }
+
+      // TODO:
+
+      return EXIT_SUCCESS;
+    }}}
 };
 
 
