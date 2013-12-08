@@ -111,28 +111,32 @@ class storehouse : public Facility {
   public:
 
 #if 0
-  storehouse(enum chocolate_type type, unsigned max_cap, unsigned init_cap) : Facility() {
+  storehouse(enum chocolate_type type, unsigned max_cap, unsigned init_cap) : Facility()
+  {{{
     this->store_type = type;
     this->max_capacity = max_cap;
     this->act_capacity = init_cap;
-  }
+  }}}
 #endif
 
-  storehouse(const char *name, enum chocolate_type type, unsigned max_cap, unsigned init_cap) : Facility(name) {
+  storehouse(const char *name, enum chocolate_type type, unsigned max_cap, unsigned init_cap) : Facility(name)
+  {{{
     this->store_type = type;
     this->max_capacity = max_cap;
     this->act_capacity = init_cap;
-  }
+  }}}
 
 #if 0
-  storehouse(const char *name, Queue *q, enum chocolate_type type, unsigned max_cap, unsigned init_cap) : Facility(name, q) {
+  storehouse(const char *name, Queue *q, enum chocolate_type type, unsigned max_cap, unsigned init_cap) : Facility(name, q)
+  {{{
     this->store_type = type;
     this->max_capacity = max_cap;
     this->act_capacity = init_cap;
-  }
+  }}}
 #endif
 
-  int withdraw(unsigned amount) {
+  int withdraw(unsigned amount)
+  {{{
     if (amount > this->max_capacity) {
       std::cerr << "SIMULATION ERROR: Order is not allowed to withdraw bigger from storehouse" << std::endl;
       std::cerr << "                  than is current maximum capacity!" << std::endl;
@@ -155,7 +159,7 @@ class storehouse : public Facility {
     }
 
     // TODO:
-  }
+  }}}
 };
 
 
@@ -201,16 +205,18 @@ class order : public Process {
     /*
      * Constructor.
      */
-    order(enum chocolate_type type) : Process() {
+    order(enum chocolate_type type) : Process()
+    {{{
       this->order_type = type;
 
       /* Size from 1 to 100 inclusive. (static_cast rounds downward) */
       this->order_size = static_cast<unsigned>(Uniform(1,101));
-    }
+    }}}
 
-    void Behavior(void) {
+    void Behavior(void)
+    {{{
 
-    }
+    }}}
 };
 
 
@@ -223,10 +229,10 @@ class batch : public Process {
     enum chocolate_type batch_type;
 
   public:
-  
-    void Behavior(void) {
+    void Behavior(void)
+    {{{
 
-    }
+    }}}
 };
 
 
@@ -238,8 +244,8 @@ class batch : public Process {
  * New orders generator for the chocolate factory system.
  */
 class generator : public Event {
-  void Behavior(void) {
-
+  void Behavior(void)
+  {{{
     double roll = Uniform(0,100);
 
     if (roll <= NEW_ORDER_WHITE_CHANCE) {
@@ -253,7 +259,7 @@ class generator : public Event {
     }
 
     this->Activate(Time + Exponential(90));
-  }
+  }}}
 };
 
 
