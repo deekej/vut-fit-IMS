@@ -116,10 +116,10 @@ enum operation_time {
 /**
  * Percentage values used for determining the decisions made by the customer (= new order).
  */
-double order_chances[][4] = {
-  {31, 48, 27},
-  {28, 54, 33},
-  {30, 51, 29},
+double order_chances[][3] = {
+  {31, 48, 27},   /* WHITE */
+  {28, 54, 33},   /* MILK */
+  {30, 51, 29},   /* DARK */
 };
 
 
@@ -190,17 +190,73 @@ static const double PACKING_UNIT_TIME = 2;              /* Time in minutes to pa
  ~ ~~~[ QUEUES ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
  * *********************************************************************************************************************************************************** */
 
+/**
+ * Queue for each type of order.
+ */
+Queue white_orders_queue;
+Queue milk_orders_queue;
+Queue dark_orders_queue;
+
+
 /* *********************************************************************************************************************************************************** *
  ~ ~~~[ PROCESSES & FACILITIES ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
  * *********************************************************************************************************************************************************** */
 
+/**
+ * Simulation process for new chocolate batch.
+ */
+class batch : public Process {
+  private:
+    unsigned quantity;                /* Kilograms of chocolate generated. */
+    enum chocolate_type batch_type;
+
+  public:
+    /**
+     * Constructor.
+     */
+    batch(enum chocolate_type type, Priority_t priority) : Process(priority)
+    {{{
+      this->batch_type = type;
+
+      return;
+    }}}
+    
+    /**
+     * Defines time spend in molding process gained upon quantity generated.
+     */
+    double molding_time(void)
+    {{{
+      return (this->quantity / MOLDING_FORM_SIZE) + MOLDING_COOLING_TIME;
+    }}}
+    
+    /**
+     * Defines time spend in packing process gained upon quantity generated.
+     */
+    double packing_time(void)
+    {{{
+      return (this->quantity / PACKING_PIECES_SIMULTANEOUSLY) * 2;
+    }}}
+
+    void Behavior(void)
+    {{{
+    // TODO: Finish this!
+    }}}
+};
+
+// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
+
+/**
+ * In case there is need to seize the storehouse to use it, the derived class of
+ * Facility is used.
+ */
 class storehouse : public Facility {
   private:
     unsigned max_capacity;                      /* Maximum capacity of this store. */
-    unsigned act_capacity;                      /* Actual capacity of this store */
     enum chocolate_type store_type;             /* Type of chocolate stored here. */
 
   public:
+    unsigned act_capacity;                      /* Actual capacity of this store */
+
     /**
      * Storehouse constructor.
      */
@@ -246,15 +302,14 @@ class storehouse : public Facility {
 
       double percentage = static_cast<double>(this->act_capacity) / static_cast<double>(this->max_capacity) * 100;
 
-
+      
       if (percentage < store_occupancy[this->store_type][MIN_OCCUPANCY]) {
-
+          (new batch(this->store_type, 1))->Activate();     /* Actual capacity is too low, creating preferred batch. */
       }
 
       if (percentage < store_occupancy[this->store_type][ADEQUATE_OCCUPANCY]) {
+          (new batch(this->store_type, 0))->Activate();     /* Actual capacity is below adequate limit, creating normal batch. */
       }
-
-      // TODO:
 
       return EXIT_SUCCESS;
     }}}
@@ -368,7 +423,6 @@ machine molding("Chocolate molding into blocks", MOLDING, 1);
 /* Packing does not have maintenance, therefore simple Facility is sufficient. */
 Facility packing("Chocolate blocks packing");
 
-
 // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 
 /**
@@ -378,6 +432,8 @@ class order : public Process {
   private:
     unsigned order_size;
     enum chocolate_type order_type;
+    storehouse *p_store;
+    Queue *p_queue;
   
   public:
     /*
@@ -385,6 +441,27 @@ class order : public Process {
      */
     order(enum chocolate_type type) : Process()
     {{{
+      switch (type) {
+        case WHITE :
+          this->p_store = &white_store;
+          this->p_queue = &white_orders_queue;
+          break;
+
+        case MILK :
+          this->p_store = &milk_store;
+          this->p_queue = &milk_orders_queue;
+          break;
+
+        case DARK :
+          this->p_store = &dark_store;
+          this->p_queue = &dark_orders_queue;
+          break;
+
+        default :
+          std::cerr << "Runtime error! Simulation got into branch in which it should not!" << std::endl;
+          exit(EXIT_FAILURE);
+      }
+
       this->order_type = type;
 
       /* Size from 1 to 100 inclusive. (static_cast rounds downward) */
@@ -393,40 +470,64 @@ class order : public Process {
 
     void Behavior(void)
     {{{
-    // TODO: FINISH THIS!
-    }}}
-};
+      if (p_store->withdraw(this->order_size) == EXIT_SUCCESS) {
+        return;   /* Enough chocolate in the storehouse, order is discharged. */
+      }
 
-// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
+      
+      double roll = Uniform(0,100);
 
-/**
- * Simulation process for new chocolate batch.
- */
-class batch : public Process {
-  private:
-    unsigned quantity;                /* Kilograms of chocolate generated. */
-    enum chocolate_type batch_type;
+      /* Depleting the corresponding storehouse provisions, order is discharged. */
+      if (roll <= order_chances[this->order_type][TAKING_REST]) {
+        p_store->withdraw(p_store->act_capacity);
+        return;
+      }
+      /* Customer doesn't want to wait and he cancels the order. */
+      else if (roll <= order_chances[this->order_type][TRYING_COMPETITION]) {
+        return;
+      }
 
-  public:
-    void Behavior(void)
-    {{{
-    // TODO: Finish this!
-    }}}
+      
+      /*
+       * NOTE: The customer informs himself on the approximate ETA of finished order.
+       *       Then he makes decision about creating new order or trying competition.
+       *       That's why we generate new roll.
+       */
+      if (Uniform(0,100) <= order_chances[this->order_type][TRYING_COMPETITION2]) {
+        return;
+      }
 
-    /**
-     * Defines time spend in molding process gained upon quantity generated.
-     */
-    double molding_time(void)
-    {{{
-      return (this->quantity / MOLDING_FORM_SIZE) + MOLDING_COOLING_TIME;
-    }}}
-    
-    /**
-     * Defines time spend in packing process gained upon quantity generated.
-     */
-    double packing_time(void)
-    {{{
-      return (this->quantity / PACKING_PIECES_SIMULTANEOUSLY) * 2;
+
+      do {
+        if (this->p_queue->Empty() == true) {
+          Priority = 1;
+        }
+        
+        /* This order is next, create new chocolate batch for it. */
+        if (Priority == 1) {
+          (new batch(this->order_type, 1))->Activate();
+        }
+        
+        /* Wait until there are enough chocolate pieces to withdraw. */
+        p_queue->Insert(this);
+        Passivate();
+
+        /* Increasing priority in case it's this order turn to create new batch. */
+        Priority = 1;
+
+      } while (p_store->withdraw(this->order_size) == EXIT_FAILURE);
+
+      
+      /* 
+       * Wake up another order from the queue so it can try withdraw or
+       * create new batch for itself.
+       */
+      if (p_queue->Empty() == false) {
+        order *p_next = static_cast<order *>(this->p_queue->GetFirst());
+        p_next->Activate();
+      }
+      
+      return;
     }}}
 };
 
