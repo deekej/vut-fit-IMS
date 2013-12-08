@@ -67,16 +67,36 @@ enum chocolate_type {
 };
 
 
-enum order_chances_types {
+enum order_chances_type {
   TAKING_REST = 0,
   TRYING_COMPETITION,
   TRYING_COMPETITION2,
 };
 
 
-enum store_occupancy_types {
+enum store_occupancy_type {
   MIN_OCCUPANCY = 0,
   ADEQUATE_OCCUPANCY,
+};
+
+
+enum machine_type {
+  CLEANING = 0,
+  ROASTING,
+  SHELLING,
+  GRINDING,
+  REFINING,
+  DEFATTING,
+  CAKE_GRINDING,
+  REMIXING,
+  CONCHING,
+  TEMPERING,
+  MOLDING,
+};
+
+enum gauss_params {
+  MEAN_VAL,
+  DISPER,
 };
 
 
@@ -91,6 +111,22 @@ double store_occupancy[][2] = {
   {20, 70},
   {25, 80},
   {20, 30},
+};
+
+
+double maintenance_times[][2] = {
+  /* 1.-> mean value, 2.-> dispersion. */
+  {15, 5},      /* Cleaning. */
+  {45, 10},     /* Roasting. */
+  {20, 5},      /* Shelling. */
+  {10, 5},      /* Grinding. */
+  {30, 10},     /* Refining. */
+  {30, 10},     /* Defatting. */
+  {15, 5},      /* Cake grinding. */
+  {20, 5},      /* Remixing. */
+  {90, 10},     /* Conching. */
+  {60, 10},     /* Tempering. */
+  {30, 5},      /* Molding. */
 };
 
 
@@ -109,32 +145,15 @@ class storehouse : public Facility {
     enum chocolate_type store_type;             /* Type of chocolate stored here. */
 
   public:
-#if 0
-    storehouse(enum chocolate_type type, unsigned max_cap, unsigned init_cap) : Facility()
-    {{{
-      this->store_type = type;
-      this->max_capacity = max_cap;
-      this->act_capacity = init_cap;
-    }}}
-#endif
-
-
+    /**
+     * Storehouse constructor.
+     */
     storehouse(const char *name, enum chocolate_type type, unsigned max_cap, unsigned init_cap) : Facility(name)
     {{{
       this->store_type = type;
       this->max_capacity = max_cap;
       this->act_capacity = init_cap;
     }}}
-
-
-#if 0
-    storehouse(const char *name, Queue *q, enum chocolate_type type, unsigned max_cap, unsigned init_cap) : Facility(name, q)
-    {{{
-      this->store_type = type;
-      this->max_capacity = max_cap;
-      this->act_capacity = init_cap;
-    }}}
-#endif
 
     /**
      * Only way how to access private member of this class and increase actual capacity.
@@ -146,7 +165,14 @@ class storehouse : public Facility {
       return;
     }}}
 
-
+    
+    /**
+     * Only way how to withdraw given amount of chocolate from storehouse.
+     * Method returns EXIT_FAILURE if the given amount is not in the storehouse
+     * right now. Upon successful withdraw method returns EXIT_SUCCESS. It also
+     * creates new chocolate batches if the actual capacity drops under
+     * predefined values after the withdrawal.
+     */
     int withdraw(unsigned amount)
     {{{
       if (amount > this->max_capacity) {
@@ -160,9 +186,11 @@ class storehouse : public Facility {
         return EXIT_FAILURE;            /* This amount can't be currently withdraw. */
       }
 
+
       this->act_capacity -= amount;
-    
+
       double percentage = static_cast<double>(this->act_capacity) / static_cast<double>(this->max_capacity) * 100;
+
 
       if (percentage < store_occupancy[this->store_type][MIN_OCCUPANCY]) {
 
@@ -178,31 +206,40 @@ class storehouse : public Facility {
 };
 
 
+
+
+class machine : public Facility {
+  private:
+    int maintenance_priority;
+
+
+  public:
+    enum machine_type type;
+
+    
+    /**
+     * Machine constructors. 1st is to avoid errors during compilation.
+     */
+    machine(void) {};
+
+    machine(const char* name, enum machine_type type, int priority) : Facility(name)
+    {{{
+      this->type = type;
+      this->maintenance_priority = priority;
+
+      return;
+    }}}
+};
+
+
+
 /* 
- *Global instances of chocolate stores. 
+ * Global instances of chocolate stores. 
  */
 storehouse white_store("White chocolate store", WHITE, 750, 0);
 storehouse milk_store(" Milk chocolate store", MILK, 2000, 0);
 storehouse dark_store(" Dark chocolate store", DARK, 1500, 0);
 
-
-/*
- * Global instances of other facilities, used during new batch process.
- */
-Facility cleaning("Cleaning of chocolate beans");
-Facility roasting("Roasting of chocolate beans");
-Facility beans_grinding("Grinding of cocoa nibs or chocolate paste");
-Facility refining("Refining of cocoa brash/chocolate paste");
-Facility defatting("Defatting of cocoa liquor");
-Facility cake_grinding("Grinding of cocoa press cake");
-Facility remixing("Chocolate paste remixing");
-Facility conching("Chocolate paste conching");
-Facility tempering("Chocolate tempering");
-Facility molding("Chocolate molding into blocks");
-Facility packing("Chocolate blocks packing");
-
-
-Facility shell_removing("Removing cocoa beans' shells");
 
 /* *********************************************************************************************************************************************************** *
  ~ ~~~[ PROCESSES ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
@@ -230,7 +267,35 @@ class order : public Process {
 
     void Behavior(void)
     {{{
+    // TODO: FINISH THIS!
+    }}}
+};
 
+
+/**
+ * Process class for simulation of maintenance of facility which will be 
+ * released.
+ */
+class machine_maintenance : public Process {
+  private:
+     machine *p_machine;
+
+  public:
+    machine_maintenance(machine *p_machine, Priority_t priority) : Process(priority)
+    {{{
+      this->p_machine = p_machine;
+
+      return;
+    }}}
+
+    
+    void Behavior(void)
+    {{{
+      Seize(*p_machine);
+      Wait(Normal(maintenance_times[p_machine->type][MEAN_VAL], maintenance_times[p_machine->type][DISPER]));
+      Release(*p_machine);
+
+      return;
     }}}
 };
 
