@@ -59,6 +59,7 @@
 /* *********************************************************************************************************************************************************** *
  ~ ~~~[ CONSTANTS & DATA TYPES DECLARATIONS ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
  * *********************************************************************************************************************************************************** */
+//{{{  -  Folding marker
 
 /**
  * Enumeration types used for addressing array values below.
@@ -148,9 +149,11 @@ double maintenance_times[][2] = {
 static const double NEW_ORDER_WHITE_CHANCE = 13;
 static const double NEW_ORDER_MILK_CHANCE = NEW_ORDER_WHITE_CHANCE + 49;
 
+// }}}  -  End of folding marker.
+
 
 /* *********************************************************************************************************************************************************** *
- ~ ~~~[ FACILITIES ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
+ ~ ~~~[ PROCESSES & FACILITIES ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
  * *********************************************************************************************************************************************************** */
 
 class storehouse : public Facility {
@@ -180,7 +183,6 @@ class storehouse : public Facility {
       return;
     }}}
 
-    
     /**
      * Only way how to withdraw given amount of chocolate from storehouse.
      * Method returns EXIT_FAILURE if the given amount is not in the storehouse
@@ -220,13 +222,44 @@ class storehouse : public Facility {
     }}}
 };
 
+// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 
+/* 
+ * Global instances of chocolate stores. 
+ */
+storehouse white_store("White chocolate store", WHITE, 750, 0);
+storehouse milk_store(" Milk chocolate store", MILK, 2000, 0);
+storehouse dark_store(" Dark chocolate store", DARK, 1500, 0);
 
+// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
+
+class machine;          /* To solve cross-references of machine & machine_maintenance classes. */
+
+/**
+ * Process class for simulation of maintenance of facility which will be 
+ * released.
+ */
+class machine_maintenance : public Process {
+  private:
+     machine *p_machine;
+
+  public:
+    machine_maintenance(machine *p_machine, Priority_t priority) : Process(priority)
+    {{{
+      this->p_machine = p_machine;
+
+      return;
+    }}}
+  
+    void Behavior(void);
+};
+
+// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 
 class machine : public Facility {
   private:
-    int maintenance_priority;
-
+    unsigned use_counter;                     /* Especially used by shelling machine. */
+    unsigned char maintenance_priority;       /* Maintenance process priority. */
 
   public:
     enum machine_type type;
@@ -237,28 +270,68 @@ class machine : public Facility {
      */
     machine(void) {};
 
-    machine(const char* name, enum machine_type type, int priority) : Facility(name)
+    machine(const char* name, enum machine_type type, unsigned char priority) : Facility(name)
     {{{
       this->type = type;
       this->maintenance_priority = priority;
+
+      this->use_counter = 0;
+
+      return;
+    }}}
+
+    
+    /**
+     * Method for wrapping simulation of maintenance done on current facility.
+     * This method should be called before releasing this facility by standard
+     * process, so we are sure that because of increased process priority it 
+     * will be first to run after the following release.
+     */
+    void maintenance(void)
+    {{{
+     (new machine_maintenance(this, this->maintenance_priority))->Activate();
 
       return;
     }}}
 };
 
 
-
-/* 
- * Global instances of chocolate stores. 
+/**
+ * Definition of purely virtual method of machine_maintenance process. Because
+ * of cross-reference dependencies between classes this has to be after the
+ * definition of machine class.
  */
-storehouse white_store("White chocolate store", WHITE, 750, 0);
-storehouse milk_store(" Milk chocolate store", MILK, 2000, 0);
-storehouse dark_store(" Dark chocolate store", DARK, 1500, 0);
+void machine_maintenance::Behavior(void)
+{{{
+  Seize(*p_machine);
+  Wait(Normal(maintenance_times[p_machine->type][MEAN_VAL], maintenance_times[p_machine->type][DISPER]));
+  Release(*p_machine);
+
+  return;
+}}}
+
+// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
+
+/*
+ * Global instances of other facilities, used during new batch process.
+ */
+machine cleaning("Cleaning of chocolate beans", CLEANING, 1);
+machine roasting("Roasting of chocolate beans", ROASTING, 1);
+machine shell_removing("Removing cocoa beans' shells", SHELLING, 1);
+machine beans_grinding("Grinding of cocoa nibs or chocolate paste", GRINDING, 2);
+machine refining("Refining of cocoa brash/chocolate paste", REFINING, 2);
+machine defatting("Defatting of cocoa liquor", DEFATTING, 1);
+machine cake_grinding("Grinding of cocoa press cake", CAKE_GRINDING, 1);
+machine remixing("Chocolate paste remixing", REMIXING, 1);
+machine conching("Chocolate paste conching", CONCHING, 1);
+machine tempering("Chocolate tempering", TEMPERING, 1);
+machine molding("Chocolate molding into blocks", MOLDING, 1);
+
+/* Packing does not have maintenance, therefore simple Facility is sufficient. */
+Facility packing("Chocolate blocks packing");
 
 
-/* *********************************************************************************************************************************************************** *
- ~ ~~~[ PROCESSES ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
- * *********************************************************************************************************************************************************** */
+// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 
 /**
  * Simulation process for new order in the system.
@@ -286,34 +359,7 @@ class order : public Process {
     }}}
 };
 
-
-/**
- * Process class for simulation of maintenance of facility which will be 
- * released.
- */
-class machine_maintenance : public Process {
-  private:
-     machine *p_machine;
-
-  public:
-    machine_maintenance(machine *p_machine, Priority_t priority) : Process(priority)
-    {{{
-      this->p_machine = p_machine;
-
-      return;
-    }}}
-
-    
-    void Behavior(void)
-    {{{
-      Seize(*p_machine);
-      Wait(Normal(maintenance_times[p_machine->type][MEAN_VAL], maintenance_times[p_machine->type][DISPER]));
-      Release(*p_machine);
-
-      return;
-    }}}
-};
-
+// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 
 /**
  * Simulation process for new chocolate batch.
