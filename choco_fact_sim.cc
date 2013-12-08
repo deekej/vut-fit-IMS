@@ -2,7 +2,7 @@
  * File:          choco_fact_sim.cc
  * Version:       0.0.0.0
  * Start date:    06-12-2013
- * Last update:   06-12-2013
+ * Last update:   08-12-2013
  *
  * Course:        IMS (winter semester, 2013)
  * Project:       Stochastic simulation of queuing system. [Assignment #4.]
@@ -60,6 +60,10 @@
  ~ ~~~[ CONSTANTS & DATA TYPES DECLARATIONS ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
  * *********************************************************************************************************************************************************** */
 
+/**
+ * Enumeration types used for addressing array values below.
+ */
+
 enum chocolate_type {
   WHITE = 0,
   MILK,
@@ -100,6 +104,9 @@ enum gauss_params {
 };
 
 
+/**
+ * Percentage values used for determining the decisions made by the customer (= new order).
+ */
 double order_chances[][4] = {
   {31, 48, 27},
   {28, 54, 33},
@@ -107,6 +114,10 @@ double order_chances[][4] = {
 };
 
 
+/**
+ * Percentages which control if there will be any new batch created because of store
+ * running below this values.
+ */
 double store_occupancy[][2] = {
   {20, 70},
   {25, 80},
@@ -114,8 +125,12 @@ double store_occupancy[][2] = {
 };
 
 
+/**
+ * Maintenance times (in minutes) for each batch facility used in batch
+ * process. 1st value is equal to mean value, 2nd value is equal to
+ * dispersion value - both used for normal (Gauss) distribution.
+ */
 double maintenance_times[][2] = {
-  /* 1.-> mean value, 2.-> dispersion. */
   {15, 5},      /* Cleaning. */
   {45, 10},     /* Roasting. */
   {20, 5},      /* Shelling. */
