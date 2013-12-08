@@ -30,6 +30,9 @@
  *
  * File encoding: en_US.utf8 (United States)
  * Compiler used: gcc (GCC) 4.8.0
+ *
+ * TODO:          Move classes definitions to separate header files and leave
+ *                here only the definitions of the classes.
  */
 
 
@@ -175,8 +178,12 @@ double maintenance_times[][2] = {
   {30, 5},      /* Molding. */
 };
 
+
 static const double NEW_ORDER_WHITE_CHANCE = 13;
 static const double NEW_ORDER_MILK_CHANCE = NEW_ORDER_WHITE_CHANCE + 49;
+
+static const double BATCH_MEAN_VAL = 250;
+static const double BATCH_DISPERSION = 15;
 
 static const double MOLDING_FORM_SIZE = 5;              /* Number of pieces processed at once. */
 static const double MOLDING_COOLING_TIME = 30;          /* Time in minutes. */
@@ -191,6 +198,13 @@ static const double PACKING_UNIT_TIME = 2;              /* Time in minutes to pa
  * *********************************************************************************************************************************************************** */
 
 /**
+ * Queues for new batches.
+ */
+Queue priority_batch_queue;
+Queue normal_batch_queue;
+
+
+/**
  * Queue for each type of order.
  */
 Queue white_orders_queue;
@@ -202,6 +216,8 @@ Queue dark_orders_queue;
  ~ ~~~[ PROCESSES & FACILITIES ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
  * *********************************************************************************************************************************************************** */
 
+class storehouse;
+
 /**
  * Simulation process for new chocolate batch.
  */
@@ -209,17 +225,11 @@ class batch : public Process {
   private:
     unsigned quantity;                /* Kilograms of chocolate generated. */
     enum chocolate_type batch_type;
+    storehouse *p_store;
+    Queue *p_queue;                   /* Queue corresponding to batch priority. */
 
   public:
-    /**
-     * Constructor.
-     */
-    batch(enum chocolate_type type, Priority_t priority) : Process(priority)
-    {{{
-      this->batch_type = type;
-
-      return;
-    }}}
+    batch(enum chocolate_type type, Priority_t priority);   /* Constructor declaration. */
     
     /**
      * Defines time spend in molding process gained upon quantity generated.
@@ -237,10 +247,7 @@ class batch : public Process {
       return (this->quantity / PACKING_PIECES_SIMULTANEOUSLY) * 2;
     }}}
 
-    void Behavior(void)
-    {{{
-    // TODO: Finish this!
-    }}}
+    void Behavior(void);
 };
 
 // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
@@ -357,7 +364,6 @@ class machine : public Facility {
   public:
     enum machine_type type;
 
-    
     /**
      * Machine constructors. 1st is to avoid errors during compilation.
      */
@@ -372,7 +378,6 @@ class machine : public Facility {
 
       return;
     }}}
-
     
     /**
      * Method for wrapping simulation of maintenance done on current facility.
@@ -422,6 +427,47 @@ machine molding("Chocolate molding into blocks", MOLDING, 1);
 
 /* Packing does not have maintenance, therefore simple Facility is sufficient. */
 Facility packing("Chocolate blocks packing");
+
+// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
+
+/**
+ * Constructor of batch class.
+ */
+batch::batch(enum chocolate_type type, Priority_t priority) : Process(priority)
+{{{
+  switch (type) {
+    case WHITE :
+      this->p_store = &white_store;
+      this->p_queue = &white_orders_queue;
+      break;
+
+    case MILK :
+      this->p_store = &milk_store;
+      this->p_queue = &milk_orders_queue;
+      break;
+
+    case DARK :
+      this->p_store = &dark_store;
+      this->p_queue = &dark_orders_queue;
+      break;
+
+    default :
+      std::cerr << "Runtime error! Simulation got into branch in which it should not!" << std::endl;
+      exit(EXIT_FAILURE);
+  }
+
+  this->batch_type = type;
+
+  return;
+}}}
+
+/**
+ * Required definition 
+ */
+void batch::Behavior(void)
+{{{
+// TODO: Finish this!
+}}}
 
 // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 
