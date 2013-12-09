@@ -2,10 +2,10 @@
  * File:          choco_fact_sim.cc
  * Version:       0.0.0.0
  * Start date:    06-12-2013
- * Last update:   08-12-2013
+ * Last update:   09-12-2013
  *
  * Course:        IMS (winter semester, 2013)
- * Project:       Stochastic simulation of queuing system. [Assignment #4.]
+ * Project:       Stochastic simulation of queuing system. [Assignment #3.]
  *
  * Authors:       Daniela Srubarova (aka Aileen), 3BIT, [team-leader]
  *                David Kaspar (aka Dee'Kej), 3BIT
@@ -155,6 +155,13 @@ enum operation_time {
 };
 
 
+enum generator_state {
+  DAY = 0,
+  NIGHT,
+  WEEKEND,
+};
+
+
 /**
  * Percentage values used for determining the decisions made by the customer (= new order).
  */
@@ -170,9 +177,9 @@ double order_chances[][3] = {
  * running below this values.
  */
 double store_occupancy[][2] = {
-  {20, 70},
-  {25, 80},
   {20, 30},
+  {25, 75},
+  {20, 70},
 };
 
 
@@ -204,20 +211,22 @@ double machine_oper_time[][2] = {
  * dispersion value - both used for normal (Gauss) distribution.
  */
 double maintenance_times[][2] = {
-  {15, 5},      /* Cleaning. */
-  {45, 10},     /* Roasting. */
-  {20, 5},      /* Shelling. */
-  {10, 5},      /* Grinding. */
-  {30, 10},     /* Refining. */
-  {30, 10},     /* Defatting. */
-  {15, 5},      /* Cake grinding. */
-  {20, 5},      /* Remixing. */
+  {15, 2},      /* Cleaning. */
+  {45, 5},      /* Roasting. */
+  {20, 2},      /* Shelling. */
+  {10, 1},      /* Grinding. */
+  {30, 4},      /* Refining. */
+  {30, 3},      /* Defatting. */
+  {15, 2},      /* Cake grinding. */
+  {20, 2},      /* Remixing. */
   {90, 10},     /* Conching. */
-  {60, 10},     /* Tempering. */
-  {30, 5},      /* Molding. */
+  {60, 5},      /* Tempering. */
+  {30, 3},      /* Molding. */
 };
 
-static const double GENERATOR_MEAN_VAL = 90;
+static const double GENERATOR_MEAN_VAL = 120;            /* In minutes. */
+static const double WORKING_HOURS_LENGTH = 480;         /* In minutes. */
+static const double NIGHT_TIME_LENGTH = 1440 - WORKING_HOURS_LENGTH;
 
 static const double NEW_ORDER_WHITE_CHANCE = 13;
 static const double NEW_ORDER_MILK_CHANCE = NEW_ORDER_WHITE_CHANCE + 49;
@@ -234,6 +243,16 @@ static const double PACKING_UNIT_TIME = 2;              /* Time in minutes to pa
 static const unsigned SHELLING_MAINTENANCE_AFTER = 5;   /* Maintenance after this number of uses. */
 
 // }}}  -  End of folding marker.
+
+/* *********************************************************************************************************************************************************** *
+ ~ ~~~[ STATISTICS & HISTOGRAMS ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
+ * *********************************************************************************************************************************************************** */
+
+/* Stores statistics. */
+Stat white_store_stat("Vyuziti skladu bile cokolady");
+Stat milk_store_stat("Vyuziti skladu mlecne cokolady");
+Stat dark_store_stat("Vyuziti skladu tmave cokolady");
+
 
 /* *********************************************************************************************************************************************************** *
  ~ ~~~[ QUEUES ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
@@ -296,6 +315,7 @@ class storehouse : public Facility {
   private:
     unsigned max_capacity;                      /* Maximum capacity of this store. */
     enum chocolate_type store_type;             /* Type of chocolate stored here. */
+    Queue *p_queue;
 
   public:
     unsigned act_capacity;                      /* Actual capacity of this store */
@@ -308,6 +328,28 @@ class storehouse : public Facility {
       this->store_type = type;
       this->max_capacity = max_cap;
       this->act_capacity = init_cap;
+
+      switch (this->store_type) {
+        case WHITE :
+          this->p_queue = &white_orders_queue;
+          white_store_stat(init_cap);
+          break;
+          
+        case MILK :
+          this->p_queue = &milk_orders_queue;
+          milk_store_stat(init_cap);
+          break;
+
+        case DARK :
+          this->p_queue = &dark_orders_queue;
+          dark_store_stat(init_cap);
+          break;
+
+        default :
+          break;
+      };
+
+      return;
     }}}
 
     /**
@@ -316,6 +358,23 @@ class storehouse : public Facility {
     void deposit(unsigned amount)
     {{{
       this->act_capacity += amount;
+
+      switch (this->store_type) {
+        case WHITE :
+          white_store_stat(this->act_capacity);
+          break;
+          
+        case MILK :
+          milk_store_stat(this->act_capacity);
+          break;
+
+        case DARK :
+          dark_store_stat(this->act_capacity);
+          break;
+
+        default :
+          break;
+      };
 
       return;
     }}}
@@ -340,18 +399,35 @@ class storehouse : public Facility {
         return EXIT_FAILURE;            /* This amount can't be currently withdraw. */
       }
 
-
       this->act_capacity -= amount;
+
+      switch (this->store_type) {
+        case WHITE :
+          white_store_stat(this->act_capacity);
+          break;
+          
+        case MILK :
+          milk_store_stat(this->act_capacity);
+          break;
+
+        case DARK :
+          dark_store_stat(this->act_capacity);
+          break;
+
+        default :
+          break;
+      };
 
       double percentage = static_cast<double>(this->act_capacity) / static_cast<double>(this->max_capacity) * 100;
 
-      
-      if (percentage < store_occupancy[this->store_type][MIN_OCCUPANCY]) {
-          (new batch(this->store_type, 1))->Activate();     /* Actual capacity is too low, creating preferred batch. */
-      }
+      if (this->p_queue->Empty() == true) {
+        if (percentage < store_occupancy[this->store_type][MIN_OCCUPANCY]) {
+            (new batch(this->store_type, 1))->Activate();     /* Actual capacity is too low, creating preferred batch. */
+        }
 
-      if (percentage < store_occupancy[this->store_type][ADEQUATE_OCCUPANCY]) {
-          (new batch(this->store_type, 0))->Activate();     /* Actual capacity is below adequate limit, creating normal batch. */
+        if (percentage < store_occupancy[this->store_type][ADEQUATE_OCCUPANCY]) {
+            (new batch(this->store_type, 0))->Activate();     /* Actual capacity is below adequate limit, creating normal batch. */
+        }
       }
 
       return EXIT_SUCCESS;
@@ -363,9 +439,9 @@ class storehouse : public Facility {
 /* 
  * Global instances of chocolate stores. 
  */
-storehouse white_store("White chocolate store", WHITE, 750, 0);
-storehouse milk_store(" Milk chocolate store", MILK, 2000, 0);
-storehouse dark_store(" Dark chocolate store", DARK, 1500, 0);
+storehouse white_store("White chocolate store", WHITE, 750, 150);
+storehouse milk_store(" Milk chocolate store", MILK, 2000, 500);
+storehouse dark_store(" Dark chocolate store", DARK, 1500, 300);
 
 // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 
@@ -626,11 +702,12 @@ void batch::Behavior(void)
 class order : public Process {
   private:
     unsigned order_size;
+    unsigned order_number;
     enum chocolate_type order_type;
 
     storehouse *p_store;
     Queue *p_queue;
-  
+
   public:
     /*
      * Constructor.
@@ -657,7 +734,7 @@ class order : public Process {
           std::cerr << "Runtime error! Simulation got into branch in which it should not!" << std::endl;
           exit(EXIT_FAILURE);
       }
-
+      
       this->order_type = type;
 
       /* Size from 1 to 100 inclusive. (static_cast rounds downward) */
@@ -671,11 +748,10 @@ class order : public Process {
         return;   /* Enough chocolate in the storehouse, order is discharged. */
       }
 
-      
       double roll = Uniform(0,100);
 
       /* Depleting the corresponding storehouse provisions, order is discharged. */
-      if (roll <= order_chances[this->order_type][TAKING_REST]) {
+      if (p_store->act_capacity != 0x0 && roll <= order_chances[this->order_type][TAKING_REST]) {
         p_store->withdraw(p_store->act_capacity);
         return;
       }
@@ -704,10 +780,14 @@ class order : public Process {
         if (Priority == 1) {
           (new batch(this->order_type, 1))->Activate();
         }
-        
+
+        // std::cout << "Order number: " << this->order_number << " is entering queue. Order type: " << this->order_type << std::endl;
+
         /* Wait until there are enough chocolate pieces to withdraw. */
         p_queue->Insert(this);
         Passivate();
+
+        // std::cout << "Order number: " << this->order_number << " is leaving queue. Order type: " << this->order_type << std::endl;
 
         /* Increasing priority in case it's this order turn to create new batch. */
         Priority = 1;
@@ -737,23 +817,90 @@ class order : public Process {
  * New orders generator for the chocolate factory system.
  */
 class generator : public Event {
-  void Behavior(void)
-  {{{
-    double roll = Uniform(0,100);
+  private:
+    enum generator_state state;
+    bool generate_new_order;
+    unsigned char day_number;
 
-    if (roll <= NEW_ORDER_WHITE_CHANCE) {
-      (new order(WHITE))->Activate();
-    }
-    else if (roll <= NEW_ORDER_MILK_CHANCE) {
-      (new order(MILK))->Activate();
-    }
-    else {
-      (new order(DARK))->Activate();
-    }
+    double next_event_time;
+    double working_end_time;
+    double night_end_time;
+    double weekend_end_time;
     
-    /* The smallest simulation time is 1 minute -> rounding. */
-    this->Activate(Time + ceil(Exponential(GENERATOR_MEAN_VAL)));
-  }}}
+
+  public:
+    generator(void) : Event ()
+    {{{
+      this->working_end_time = Time + WORKING_HOURS_LENGTH;
+      this->next_event_time = Time;
+
+      this->generate_new_order = false;
+      this->day_number = 1;
+      this->state = DAY;
+
+      return;
+    }}}
+
+
+    void Behavior(void)
+    {{{
+      switch(this->state) {
+        case DAY :
+          if (this->next_event_time < working_end_time) {
+            this->generate_new_order = true;
+          }
+          else if (this->day_number < 5) {
+            this->day_number++;
+            this->state = NIGHT;
+            this->night_end_time = this->working_end_time + NIGHT_TIME_LENGTH;
+          }
+          else {
+            this->state = WEEKEND;
+            this->weekend_end_time = this->working_end_time + NIGHT_TIME_LENGTH + 2880;   /* 2880 == 48 hours in minutes. */
+          }
+
+          break;
+
+        case NIGHT :
+          if (this->next_event_time > this->night_end_time) {
+            this->state = DAY;
+            this->generate_new_order = true;
+            this->working_end_time = this->night_end_time + WORKING_HOURS_LENGTH;
+          }
+
+          break;
+
+        case WEEKEND :
+          if (this->next_event_time > this->weekend_end_time) {
+            this->state = DAY;
+            this->day_number = 1;
+            this->generate_new_order = true;
+            this->working_end_time = this->weekend_end_time + WORKING_HOURS_LENGTH;
+          }
+      };
+
+
+      if (this->generate_new_order == true) {
+        double roll = Uniform(0,100);
+
+        if (roll <= NEW_ORDER_WHITE_CHANCE) {
+          (new order(WHITE))->Activate();
+        }
+        else if (roll <= NEW_ORDER_MILK_CHANCE) {
+          (new order(MILK))->Activate();
+        }
+        else {
+          (new order(DARK))->Activate();
+        }
+
+        this->generate_new_order = false;
+      }
+
+      this->next_event_time = Time + ceil(Exponential(GENERATOR_MEAN_VAL));
+
+      /* The smallest simulation time is 1 minute -> rounding. */
+      this->Activate(this->next_event_time);
+    }}}
 };
 
 
@@ -783,15 +930,19 @@ int main(int argc, char* argv[])
   seed.open("/dev/urandom", std::ifstream::binary);
 
   seed.read(reinterpret_cast<char *>(&seed_value), sizeof(long));
-  RandomSeed(seed_value);
+ //  RandomSeed(seed_value);
 
   // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 
-  Init(0, 61000);
+  Init(0, 100000);
 
   (new generator())->Activate();
 
   Run();
+
+  white_store_stat.Output();
+  milk_store_stat.Output();
+  dark_store_stat.Output();
 
   // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 
