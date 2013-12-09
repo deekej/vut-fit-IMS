@@ -98,6 +98,55 @@ static inline double normal(double mean_val, double dispersion)
   return (x < 1.0) ? 1.0 : x ;
 }}}
 
+
+void display_simulation_params(void)
+{{{
+  Print("+------------------------------------------------------------------------------+\n");
+  Print("|                   Hypothetical chocolate factory simulation                  |\n");
+  Print("+------------------------------------------------------------------------------+\n");
+  Print("                            Simulation PARAMETERS:                              \n");
+  Print("+------------------------------------------------------------------------------+\n\n");
+  Print("New orders generation interval: 60 minutes with exponential distribution\n\n");
+  Print("+==============================================================================+\n");
+  Print("Order probability of each chocolate type:\n"); 
+  Print("White choc.: 13%\tMilk choc.: 49%\t\tDark choc.: 38%\n");
+  Print("+------------------------------------------------------------------------------+\n");
+  Print("Probability of customer leaving system if there isn't enough chocolate in store:\n");
+  Print("White choc.: 17%\tMilk choc.: 26%\t\tDark choc.: 21%\n");
+  Print("+------------------------------------------------------------------------------+\n");
+  Print("Probability of customer buying redeeming the chocolate stock:\n");
+  Print("White choc.: 31%\tMilk choc.: 28%\t\tDark choc.: 30%\n");
+  Print("+------------------------------------------------------------------------------+\n");
+  Print("Probability of customer informing himself about order waiting times:\n");
+  Print("White choc.: 52%\tMilk choc.: 46%\t\tDark choc.: 49%\n");
+  Print("+------------------------------------------------------------------------------+\n");
+  Print("Probability of customer leaving due too long waiting times:\n");
+  Print("White choc.: 27%\tMilk choc.: 33%\t\tDark choc.: 29%\n");
+  Print("+------------------------------------------------------------------------------+\n");
+  Print("Probability of customer eventually creating new order:\n");
+  Print("White choc.: 73%\tMilk choc.: 67%\t\tDark choc.: 71%\n");
+  Print("+------------------------------------------------------------------------------+\n\n");
+  Print("NOTE: See the Petri Net visualization to see the customers' deciding process.\n\n");
+  Print("===============================================================================+\n");
+  Print("STORES hypothetical capacities (used for calculation of occupancy):\n");
+  Print("White choc.: 750 pcs\tMilk choc.: 2000 pcs\tDark choc.: 1500 pcs\n");
+  Print("+------------------------------------------------------------------------------+\n");
+  Print("STORES minimal required occupancy:\n");
+  Print("White choc.: 20%\tMilk choc.: 25%\t\tDark choc.: 20%\n");
+  Print("+------------------------------------------------------------------------------+\n");
+  Print("STORES ideal occupancy:\n");
+  Print("White choc.: 30%\tMilk choc.: 75%\t\tDark choc.: 70%\n");
+  Print("+------------------------------------------------------------------------------+\n\n");
+  Print("      To see operation & maintenance times of each machine (facility) in the\n"
+        "NOTE: new chocolate batch creation process, see the 2nd page of Petri net in\n"
+        "      documentation.\n\n");
+  Print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+  Print("                            Simulation run RESULTS:                             \n");
+  Print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n");
+  return;
+}}}
+
+
 /* *********************************************************************************************************************************************************** *
  ~ ~~~[ CONSTANTS & DATA TYPES DECLARATIONS ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
  * *********************************************************************************************************************************************************** */
@@ -111,6 +160,7 @@ enum chocolate_type {
   WHITE = 0,
   MILK,
   DARK,
+  GLOBAL,
 };
 
 
@@ -165,7 +215,7 @@ enum generator_state {
 /**
  * Percentage values used for determining the decisions made by the customer (= new order).
  */
-double order_chances[][3] = {
+static double order_chances[][3] = {
   {31, 48, 27},   /* WHITE */
   {28, 54, 33},   /* MILK */
   {30, 51, 29},   /* DARK */
@@ -176,7 +226,7 @@ double order_chances[][3] = {
  * Percentages which control if there will be any new batch created because of store
  * running below this values.
  */
-double store_occupancy[][2] = {
+static double store_occupancy[][2] = {
   {20, 30},
   {25, 75},
   {20, 70},
@@ -187,7 +237,7 @@ double store_occupancy[][2] = {
  * Minimal and maximal values of machine operation time - for use with Uniform()
  * function.
  */
-double machine_oper_time[][2] = {
+static double machine_oper_time[][2] = {
   {25, 50},     /* Cleaning. */
   {30, 120},    /* Roasting. */
   {15, 25},     /* Shelling. */
@@ -210,7 +260,7 @@ double machine_oper_time[][2] = {
  * process. 1st value is equal to mean value, 2nd value is equal to
  * dispersion value - both used for normal (Gauss) distribution.
  */
-double maintenance_times[][2] = {
+static double maintenance_times[][2] = {
   {15, 2},      /* Cleaning. */
   {45, 5},      /* Roasting. */
   {20, 2},      /* Shelling. */
@@ -224,12 +274,15 @@ double maintenance_times[][2] = {
   {30, 3},      /* Molding. */
 };
 
-static const double GENERATOR_MEAN_VAL = 120;            /* In minutes. */
+static const double GENERATOR_MEAN_VAL = 60;           /* In minutes. */
 static const double WORKING_HOURS_LENGTH = 480;         /* In minutes. */
 static const double NIGHT_TIME_LENGTH = 1440 - WORKING_HOURS_LENGTH;
 
 static const double NEW_ORDER_WHITE_CHANCE = 13;
 static const double NEW_ORDER_MILK_CHANCE = NEW_ORDER_WHITE_CHANCE + 49;
+
+static const double ORDER_SIZE_LOW = 1;
+static const double ORDER_SIZE_HIGH = 101;
 
 static const double BATCH_MEAN_VAL = 250;
 static const double BATCH_DISPERSION = 15;
@@ -248,11 +301,33 @@ static const unsigned SHELLING_MAINTENANCE_AFTER = 5;   /* Maintenance after thi
  ~ ~~~[ STATISTICS & HISTOGRAMS ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
  * *********************************************************************************************************************************************************** */
 
-/* Stores statistics. */
-Stat white_store_stat("Vyuziti skladu bile cokolady");
-Stat milk_store_stat("Vyuziti skladu mlecne cokolady");
-Stat dark_store_stat("Vyuziti skladu tmave cokolady");
+enum orders_statistics_index {
+  GLOBAL_COUNT = 0,
+  IMM_PROCESSED,
+  TOOK_REST,
+  COMPETITION,
+  COMPETITION2,
+  NEW_ORDER,
+  NEW_BATCH,
+};
 
+
+/*
+ * We're using chocolate type enumeration for indexing 2nd dimension of the array.
+ */
+static unsigned orders_statistics[][4] = {
+  {0, 0, 0, 0},           /* GLOBAL_COUNT */
+  {0, 0, 0, 0},           /* IMM_PROCESSED */
+  {0, 0, 0, 0},           /* TAKING_REST */
+  {0, 0, 0, 0},           /* COMPETITION */
+  {0, 0, 0, 0},           /* COMPETITION2 */
+  {0, 0, 0, 0},           /* NEW_ORDER */
+  {0, 0, 0, 0},           /* NEW_BATCH */
+};
+
+
+/* Histograms. */
+Histogram orders_systime("of 30 days (time the orders spent in system):", 0, 1440, 30);
 
 /* *********************************************************************************************************************************************************** *
  ~ ~~~[ QUEUES ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
@@ -261,9 +336,9 @@ Stat dark_store_stat("Vyuziti skladu tmave cokolady");
 /**
  * Queue for each type of order.
  */
-Queue white_orders_queue;
-Queue milk_orders_queue;
-Queue dark_orders_queue;
+Queue white_orders_queue("- WHITE chocolate orders:");
+Queue milk_orders_queue("- MILK chocolate orders:");
+Queue dark_orders_queue("- DARK chocolate orders:");
 
 
 /* *********************************************************************************************************************************************************** *
@@ -332,17 +407,14 @@ class storehouse : public Facility {
       switch (this->store_type) {
         case WHITE :
           this->p_queue = &white_orders_queue;
-          white_store_stat(init_cap);
           break;
           
         case MILK :
           this->p_queue = &milk_orders_queue;
-          milk_store_stat(init_cap);
           break;
 
         case DARK :
           this->p_queue = &dark_orders_queue;
-          dark_store_stat(init_cap);
           break;
 
         default :
@@ -358,23 +430,6 @@ class storehouse : public Facility {
     void deposit(unsigned amount)
     {{{
       this->act_capacity += amount;
-
-      switch (this->store_type) {
-        case WHITE :
-          white_store_stat(this->act_capacity);
-          break;
-          
-        case MILK :
-          milk_store_stat(this->act_capacity);
-          break;
-
-        case DARK :
-          dark_store_stat(this->act_capacity);
-          break;
-
-        default :
-          break;
-      };
 
       return;
     }}}
@@ -400,23 +455,6 @@ class storehouse : public Facility {
       }
 
       this->act_capacity -= amount;
-
-      switch (this->store_type) {
-        case WHITE :
-          white_store_stat(this->act_capacity);
-          break;
-          
-        case MILK :
-          milk_store_stat(this->act_capacity);
-          break;
-
-        case DARK :
-          dark_store_stat(this->act_capacity);
-          break;
-
-        default :
-          break;
-      };
 
       double percentage = static_cast<double>(this->act_capacity) / static_cast<double>(this->max_capacity) * 100;
 
@@ -708,6 +746,8 @@ class order : public Process {
     storehouse *p_store;
     Queue *p_queue;
 
+    double start_time;
+
   public:
     /*
      * Constructor.
@@ -737,38 +777,58 @@ class order : public Process {
       
       this->order_type = type;
 
-      /* Size from 1 to 100 inclusive. (static_cast rounds downward) */
-      this->order_size = static_cast<unsigned>(Uniform(1,101));
+      /* static_cast<> rounds downward - keep that in mind!! */
+      this->order_size = static_cast<unsigned>(Uniform(ORDER_SIZE_LOW, ORDER_SIZE_HIGH));
     }}}
 
 
     void Behavior(void)
     {{{
+      this->start_time = Time;
+
       if (p_store->withdraw(this->order_size) == EXIT_SUCCESS) {
-        return;   /* Enough chocolate in the storehouse, order is discharged. */
+
+        /* Enough chocolate in the storehouse, order is discharged. */
+        orders_statistics[IMM_PROCESSED][this->order_type]++;
+        orders_statistics[IMM_PROCESSED][GLOBAL]++;
+
+        return;
       }
+
 
       double roll = Uniform(0,100);
 
       /* Depleting the corresponding storehouse provisions, order is discharged. */
       if (p_store->act_capacity != 0x0 && roll <= order_chances[this->order_type][TAKING_REST]) {
         p_store->withdraw(p_store->act_capacity);
+
+        orders_statistics[TOOK_REST][this->order_type]++;
+        orders_statistics[TOOK_REST][GLOBAL]++;
+
         return;
       }
       /* Customer doesn't want to wait and he cancels the order. */
       else if (roll <= order_chances[this->order_type][TRYING_COMPETITION]) {
+        orders_statistics[COMPETITION][this->order_type]++;
+        orders_statistics[COMPETITION][GLOBAL]++;
+
         return;
       }
 
-      
       /*
        * NOTE: The customer informs himself on the approximate ETA of finished order.
        *       Then he makes decision about creating new order or trying competition.
        *       That's why we generate new roll.
        */
       if (Uniform(0,100) <= order_chances[this->order_type][TRYING_COMPETITION2]) {
+        orders_statistics[COMPETITION2][this->order_type]++;
+        orders_statistics[COMPETITION2][GLOBAL]++;
+
         return;
       }
+
+      orders_statistics[NEW_ORDER][this->order_type]++;
+      orders_statistics[NEW_ORDER][GLOBAL]++;
 
 
       do {
@@ -779,15 +839,14 @@ class order : public Process {
         /* This order is next, create new chocolate batch for it. */
         if (Priority == 1) {
           (new batch(this->order_type, 1))->Activate();
-        }
 
-        // std::cout << "Order number: " << this->order_number << " is entering queue. Order type: " << this->order_type << std::endl;
+          orders_statistics[NEW_BATCH][this->order_type]++;
+          orders_statistics[NEW_BATCH][GLOBAL]++;
+        }
 
         /* Wait until there are enough chocolate pieces to withdraw. */
         p_queue->Insert(this);
         Passivate();
-
-        // std::cout << "Order number: " << this->order_number << " is leaving queue. Order type: " << this->order_type << std::endl;
 
         /* Increasing priority in case it's this order turn to create new batch. */
         Priority = 1;
@@ -803,7 +862,9 @@ class order : public Process {
         order *p_next = static_cast<order *>(this->p_queue->GetFirst());
         p_next->Activate();
       }
-      
+
+      orders_systime(Time - this->start_time);
+
       return;
     }}}
 };
@@ -844,6 +905,8 @@ class generator : public Event {
 
     void Behavior(void)
     {{{
+      
+      /* Finite state automata for only accepting orders which come in working hours. */
       switch(this->state) {
         case DAY :
           if (this->next_event_time < working_end_time) {
@@ -885,15 +948,19 @@ class generator : public Event {
 
         if (roll <= NEW_ORDER_WHITE_CHANCE) {
           (new order(WHITE))->Activate();
+          orders_statistics[GLOBAL_COUNT][WHITE]++;
         }
         else if (roll <= NEW_ORDER_MILK_CHANCE) {
           (new order(MILK))->Activate();
+          orders_statistics[GLOBAL_COUNT][MILK]++;
         }
         else {
           (new order(DARK))->Activate();
+          orders_statistics[GLOBAL_COUNT][DARK]++;
         }
 
         this->generate_new_order = false;
+        orders_statistics[GLOBAL_COUNT][GLOBAL]++;
       }
 
       this->next_event_time = Time + ceil(Exponential(GENERATOR_MEAN_VAL));
@@ -930,19 +997,83 @@ int main(int argc, char* argv[])
   seed.open("/dev/urandom", std::ifstream::binary);
 
   seed.read(reinterpret_cast<char *>(&seed_value), sizeof(long));
- //  RandomSeed(seed_value);
+  //RandomSeed(seed_value);
 
   // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 
   Init(0, 100000);
-
   (new generator())->Activate();
-
   Run();
 
-  white_store_stat.Output();
-  milk_store_stat.Output();
-  dark_store_stat.Output();
+  // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // 
+
+  display_simulation_params();
+  
+  Print("Number of customers interested in:\n");
+  Print("----------------------------------\n");
+  Print("WHITE choc.: %u\t\tMILK choc.: %u\t\tDARK choc.: %u\n", orders_statistics[GLOBAL_COUNT][WHITE],
+                            orders_statistics[GLOBAL_COUNT][MILK], orders_statistics[GLOBAL_COUNT][DARK]);
+
+  Print("\n\n");
+  Print("Number of customers immediately discharged:\n");
+  Print("-------------------------------------------\n");
+  Print("WHITE choc.: %u\t\tMILK choc.: %u\t\tDARK choc.: %u\n", orders_statistics[IMM_PROCESSED][WHITE],
+                         orders_statistics[IMM_PROCESSED][MILK], orders_statistics[IMM_PROCESSED][DARK]);
+
+  Print("\n\n");
+  Print("Number of customers who fully redeeming the chocolate stock:\n");
+  Print("------------------------------------------------------------\n");
+  Print("WHITE choc.: %u\t\tMILK choc.: %u\t\tDARK choc.: %u\n", orders_statistics[TOOK_REST][WHITE],
+                             orders_statistics[TOOK_REST][MILK], orders_statistics[TOOK_REST][DARK]);
+
+  Print("\n\n");
+  Print("Number of customers who immediately left to try competition:\n");
+  Print("------------------------------------------------------------\n");
+  Print("WHITE choc.: %u\t\tMILK choc.: %u\t\tDARK choc.: %u\n", orders_statistics[COMPETITION][WHITE],
+                           orders_statistics[COMPETITION][MILK], orders_statistics[COMPETITION][DARK]);
+
+  Print("\n\n");
+  Print("Number of customers who left to try competition after hearing\nthe waiting times:\n");
+  Print("-------------------------------------------------------------\n");
+  Print("WHITE choc.: %u\t\tMILK choc.: %u\t\tDARK choc.: %u\n", orders_statistics[COMPETITION2][WHITE],
+                          orders_statistics[COMPETITION2][MILK], orders_statistics[COMPETITION2][DARK]);
+
+  Print("\n\n");
+  Print("Number of customers who decided to create new order:\n");
+  Print("----------------------------------------------------\n");
+  Print("WHITE choc.: %u\t\tMILK choc.: %u\t\tDARK choc.: %u\n", orders_statistics[NEW_ORDER][WHITE],
+                             orders_statistics[NEW_ORDER][MILK], orders_statistics[NEW_ORDER][DARK]);
+
+  Print("\n\n");
+  Print("Number of orders which eventually created new batch in the system:\n");
+  Print("------------------------------------------------------------------\n");
+  Print("WHITE choc.: %u\t\tMILK choc.: %u\t\tDARK choc.: %u\n", orders_statistics[NEW_BATCH][WHITE],
+                             orders_statistics[NEW_BATCH][MILK], orders_statistics[NEW_BATCH][DARK]);
+  Print("\n\n");
+
+  Print("Total numbers:\n");
+  Print("--------------\n");
+  Print("# of customers:\t\t\t\t\t\t%u\n", orders_statistics[GLOBAL_COUNT][GLOBAL]);
+  Print("# of immediately discharged customers:\t\t\t%u\n", orders_statistics[IMM_PROCESSED][GLOBAL]);
+  Print("# of customers who redeemed chocolate stock:\t\t%u\n", orders_statistics[TOOK_REST][GLOBAL]);
+  Print("# of customers who immediately left to for competition:\t%u\n", orders_statistics[COMPETITION][GLOBAL]);
+  Print("# of customers who left to for competition afterwards:\t%u\n", orders_statistics[COMPETITION2][GLOBAL]);
+  Print("# of customers who created new order:\t\t\t%u\n", orders_statistics[NEW_ORDER][GLOBAL]);
+  Print("# of orders which created new chocolate batches:\t%u\n", orders_statistics[NEW_BATCH][GLOBAL]);
+
+  Print("\n\n");
+
+  orders_systime.Output();
+  
+  Print("\n+----------------------------------------------------------+\n");
+  Print("                   Each queue statistics:                   \n");
+
+  white_orders_queue.Output();
+  milk_orders_queue.Output();
+  dark_orders_queue.Output();
+
+  Print("\n\n");
+
 
   // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 
