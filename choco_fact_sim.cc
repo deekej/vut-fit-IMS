@@ -37,6 +37,7 @@
  *                here only the definitions of the classes.
  */
 
+// #define SIMULATION_2
 
 /* *********************************************************************************************************************************************************** *
  * ***[ START OF CHOCO_FACT_SIM.CC ]************************************************************************************************************************** *
@@ -628,10 +629,8 @@ class machine_maintenance : public Process {
 // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 
 class machine : public Facility {
-  private:
-    unsigned char maintenance_priority;       /* Maintenance process priority. */
-
   public:
+    unsigned char maintenance_priority;       /* Maintenance process priority. */
     unsigned use_counter;                     /* Especially used by shelling machine. */
     enum machine_type type;
 
@@ -691,12 +690,36 @@ void machine_maintenance::Behavior(void)
 machine cleaning("- Cleaning machine [step #1]", CLEANING, 2);                        /* 1. */
 machine roasting("- Roasting machine [step #2]", ROASTING, 2);                        /* 2. */
 machine shelling("- Shelling machine [step #3]", SHELLING, 2);                        /* 3. */
-machine grinding("- Grinding machine [step #4 & #9]", GRINDING, 3);                   /* 4. & 9. */
-machine refining("- Refining machine [step #5 & 10]", REFINING, 3);                   /* 5. & 10. */
 machine defatting("- Defatting machine [step #6]", DEFATTING, 2);                     /* 6. */
 machine cake_grinding("- Press cake grinding machine [step #7]", CAKE_GRINDING, 2);   /* 7. */
 machine remixing("- Remixing machine [step #8]", REMIXING, 2);                        /* 8. */
-machine conching("- Conching machine [step #11]", CONCHING, 2);                       /* 11. */
+
+#if   defined(SIMULATION_2)
+  machine grinding("- Grinding machine [step #4 & #9]", GRINDING, 3);                  /* 4. & 9. */
+  machine refining("- Refining machine [step #5 & 10]", REFINING, 3);                  /* 5. & 10. */
+
+  machine conching1("- Conching machine #1 [step #11]", CONCHING, 2);                  /* 11. */
+  machine conching2("- Conching machine #2 [step #11]", CONCHING, 2);                  /* 11. */
+
+#elif defined(SIMULATION_3)
+  machine grinding1("- Grinding machine #1 [step #4 & #9]", GRINDING, 3);              /* 4. & 9. */
+  machine grinding2("- Grinding machine #2 [step #4 & #9]", GRINDING, 3);              /* 4. & 9. */
+
+  machine refining1("- Refining machine #1 [step #5 & 10]", REFINING, 3);              /* 5. & 10. */
+  machine refining2("- Refining machine #2 [step #5 & 10]", REFINING, 3);              /* 5. & 10. */
+
+  machine conching1("- Conching machine #1 [step #11]", CONCHING, 2);                  /* 11. */
+  machine conching2("- Conching machine #2 [step #11]", CONCHING, 2);                  /* 11. */
+  machine conching3("- Conching machine #3 [step #11]", CONCHING, 2);                  /* 11. */
+  machine conching4("- Conching machine #4 [step #11]", CONCHING, 2);                  /* 11. */
+
+#else
+  machine grinding("- Grinding machine [step #4 & #9]", GRINDING, 3);                   /* 4. & 9. */
+  machine refining("- Refining machine [step #5 & 10]", REFINING, 3);                   /* 5. & 10. */
+  machine conching("- Conching machine [step #11]", CONCHING, 2);                     /* 11. */
+
+#endif
+
 machine tempering("- Tempering machine [step #12]", TEMPERING, 2);                    /* 12. */
 machine molding("- Molding machine [step #13]", MOLDING, 2);                          /* 13. */
 
@@ -774,6 +797,36 @@ void batch::Behavior(void)
 
   Release(shelling);
 
+#if defined(SIMULATION_3)
+  /* 4. */
+  if (grinding1.QueueLen() < grinding2.QueueLen()) {
+    Seize(grinding1);
+    Wait(Uniform(machine_oper_time[GRINDING][MIN], machine_oper_time[GRINDING][MAX]));
+    grinding1.maintenance();
+    Release(grinding1);
+  }
+  else {
+    Seize(grinding2);
+    Wait(Uniform(machine_oper_time[GRINDING][MIN], machine_oper_time[GRINDING][MAX]));
+    grinding2.maintenance();
+    Release(grinding2);
+  }
+
+  /* 5. */
+  if (refining1.QueueLen() < refining2.QueueLen()) {
+    Seize(refining1);
+    Wait(Uniform(machine_oper_time[GRINDING][MIN], machine_oper_time[GRINDING][MAX]));
+    refining1.maintenance();
+    Release(refining1);
+  }
+  else {
+    Seize(refining2);
+    Wait(Uniform(machine_oper_time[GRINDING][MIN], machine_oper_time[GRINDING][MAX]));
+    refining2.maintenance();
+    Release(refining2);
+  }
+
+#else
   /* 4. */
   Seize(grinding);
   Wait(Uniform(machine_oper_time[GRINDING][MIN], machine_oper_time[GRINDING][MAX]));
@@ -785,11 +838,12 @@ void batch::Behavior(void)
   Wait(Uniform(machine_oper_time[GRINDING][MIN], machine_oper_time[GRINDING][MAX]));
   grinding.maintenance();
   Release(refining);
+#endif
 
   /* 6. */
   Seize(defatting);
   Wait(Uniform(machine_oper_time[DEFATTING][MIN], machine_oper_time[DEFATTING][MAX]));
-  grinding.maintenance();
+  defatting.maintenance();
   Release(defatting);
   
   /* 7. */
@@ -803,7 +857,115 @@ void batch::Behavior(void)
   Wait(Uniform(machine_oper_time[REMIXING][MIN], machine_oper_time[REMIXING][MAX]));
   remixing.maintenance();
   Release(remixing);
-              
+
+#if defined(SIMULATION_3)
+  Priority++;               /* Temporarily increasing priority to overtake line for next 2 steps. */
+
+  /* 9. */          
+  if (grinding1.QueueLen() < grinding2.QueueLen()) {
+    Seize(grinding1);
+    Wait(Uniform(machine_oper_time[GRINDING][MIN], machine_oper_time[GRINDING][MAX]));
+    grinding1.maintenance();
+    Release(grinding1);
+  }
+  else {
+    Seize(grinding2);
+    Wait(Uniform(machine_oper_time[GRINDING][MIN], machine_oper_time[GRINDING][MAX]));
+    grinding2.maintenance();
+    Release(grinding2);
+  }
+
+  /* 10. */
+  if (refining1.QueueLen() < refining2.QueueLen()) {
+    Seize(refining1);
+    Wait(Uniform(machine_oper_time[GRINDING][MIN], machine_oper_time[GRINDING][MAX]));
+    refining1.maintenance();
+    Release(refining1);
+  }
+  else {
+    Seize(refining2);
+    Wait(Uniform(machine_oper_time[GRINDING][MIN], machine_oper_time[GRINDING][MAX]));
+    refining2.maintenance();
+    Release(refining2);
+  }
+
+  Priority--;               /* Restoring process priority. */
+
+  unsigned machine = 0;
+  
+
+  /* 
+   * Selecting machine with lowest queue with if-else-if construction
+   * since we wasn't able to construct corresponding machine array.
+   */
+  if (conching1.QueueLen() < conching2.QueueLen()) {
+    machine = 1;
+  }
+  else {
+    machine = 2;
+  }
+
+  if (conching3.QueueLen() < conching4.QueueLen()) {
+    if (machine == 1) {
+      if (conching3.QueueLen() < conching1.QueueLen()) {
+        machine = 3;
+      }
+    }
+    else {
+      if (conching3.QueueLen() < conching2.QueueLen()) {
+        machine = 3;
+      }
+    }
+  }
+  else {
+    if (machine == 1) {
+      if (conching4.QueueLen() < conching1.QueueLen()) {
+        machine = 4;
+      }
+    }
+    else {
+      if (conching4.QueueLen() < conching2.QueueLen()) {
+        machine = 4;
+      }
+    }
+  }
+
+  /* 11. */
+  switch (machine) {
+    case 1 :
+      Seize(conching1);
+      Wait(Uniform(machine_oper_time[CONCHING][MIN], machine_oper_time[CONCHING][MAX]));
+      conching1.maintenance();
+      Release(conching1);
+      break;
+
+    case 2 :
+      Seize(conching2);
+      Wait(Uniform(machine_oper_time[CONCHING][MIN], machine_oper_time[CONCHING][MAX]));
+      conching2.maintenance();
+      Release(conching2);
+      break;
+
+    case 3 :
+      Seize(conching3);
+      Wait(Uniform(machine_oper_time[CONCHING][MIN], machine_oper_time[CONCHING][MAX]));
+      conching3.maintenance();
+      Release(conching3);
+      break;
+
+    case 4 :
+      Seize(conching4);
+      Wait(Uniform(machine_oper_time[CONCHING][MIN], machine_oper_time[CONCHING][MAX]));
+      conching4.maintenance();
+      Release(conching4);
+      break;
+
+    default :
+      std::cerr << "Runtime error! Simulation got into branch in which it should not!" << std::endl;
+      exit(EXIT_FAILURE);
+  }
+
+#else              
   /* 9. */          
   Priority++;               /* Temporarily increasing priority to overtake line for next 2 steps. */
 
@@ -819,12 +981,34 @@ void batch::Behavior(void)
   Release(refining);
 
   Priority--;               /* Restoring process priority. */
+#endif
 
+#if defined(SIMULATION_2)
+  if (conching1.QueueLen() < conching2.QueueLen()) {
+    /* 11. */
+    Seize(conching1);
+    Wait(Uniform(machine_oper_time[CONCHING][MIN], machine_oper_time[CONCHING][MAX]));
+    conching1.maintenance();
+    Release(conching1);
+  }
+  else {
+    /* 11. */
+    Seize(conching2);
+    Wait(Uniform(machine_oper_time[CONCHING][MIN], machine_oper_time[CONCHING][MAX]));
+    conching2.maintenance();
+    Release(conching2);
+  }
+
+#elif defined(SIMULATION_3)
+
+#else
   /* 11. */
   Seize(conching);
   Wait(Uniform(machine_oper_time[CONCHING][MIN], machine_oper_time[CONCHING][MAX]));
   conching.maintenance();
   Release(conching);
+
+#endif
 
   /* 12. */
   Seize(tempering);
@@ -1138,6 +1322,16 @@ int main(int argc, char* argv[])
 
   // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // 
 
+
+#if defined(SIMULATION_2)
+  SetOutput("simulation2.txt");
+#elif defined(SIMULATION_3)
+  SetOutput("simulation3.txt");
+#else
+  SetOutput("simulation1.txt");
+#endif
+
+
   display_simulation_params();
   
   Print("Number of customers interested in:\n");
@@ -1274,12 +1468,29 @@ int main(int argc, char* argv[])
   cleaning.Output();
   roasting.Output();
   shelling.Output();
+#if defined(SIMULATION_3)
+  grinding1.Output();
+  grinding2.Output();
+  refining1.Output();
+  refining2.Output();
+#else
   grinding.Output();
   refining.Output();
+#endif
   defatting.Output();
   cake_grinding.Output();
   remixing.Output();
+#if defined(SIMULATION_3)
+  conching1.Output();
+  conching2.Output();
+  conching3.Output();
+  conching4.Output();
+#elif defined(SIMULATION_2)
+  conching1.Output();
+  conching2.Output();
+#else
   conching.Output();
+#endif
   tempering.Output();
   molding.Output();
   packing.Output();
