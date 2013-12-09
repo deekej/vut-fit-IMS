@@ -106,7 +106,8 @@ void display_simulation_params(void)
   Print("+------------------------------------------------------------------------------+\n");
   Print("                            Simulation PARAMETERS:                              \n");
   Print("+------------------------------------------------------------------------------+\n\n");
-  Print("New orders generation interval: 60 minutes with exponential distribution\n\n");
+  Print("New orders generation interval:       60 minutes with exponential distribution\n");
+  Print("Simulation time:                 100 000 minutes (~70 days)\n\n");
   Print("+==============================================================================+\n");
   Print("Order probability of each chocolate type:\n"); 
   Print("White choc.: 13%\tMilk choc.: 49%\t\tDark choc.: 38%\n");
@@ -347,9 +348,13 @@ static unsigned store_statistics[][4] = {
   {0, 0, 0, 0},           /* LONGEST_EMPTY_TIME */
 };
 
+double global_machine_runtime = 0;
+double global_maintenance_time = 0;
+
 
 /* Histograms. */
 Histogram orders_systime("of 30 days (time the orders spent in system):", 0, 1440, 30);
+Histogram batches_systime("of 10 weeks (time the batches spent in system)", 0, 10080, 10);
 
 /* Statistics. */
 Stat white_store_stat("- WHITE chocolate storage:");
@@ -385,6 +390,8 @@ class batch : public Process {
 
     storehouse *p_store;
     Queue *p_orders_queue;            /* Queue of orders waiting to be processed. */
+
+    double start_time;
 
   public:
     batch(enum chocolate_type type, Priority_t priority);   /* Constructor declaration. */
@@ -665,8 +672,11 @@ class machine : public Facility {
  */
 void machine_maintenance::Behavior(void)
 {{{
+  double maintenance_time = normal(maintenance_times[p_machine->type][MEAN_VAL], maintenance_times[p_machine->type][DISPER]);
+  global_maintenance_time += maintenance_time;
+
   Seize(*p_machine);
-  Wait(normal(maintenance_times[p_machine->type][MEAN_VAL], maintenance_times[p_machine->type][DISPER]));
+  Wait(maintenance_time);
   Release(*p_machine);
 
   return;
@@ -678,20 +688,20 @@ void machine_maintenance::Behavior(void)
  * Global instances of machines (facilities) used during the new batch process.
  * Priority of maintenance is always higher then priority of batch processes.
  */
-machine cleaning("Cleaning of chocolate beans", CLEANING, 2);                 /* 1. */
-machine roasting("Roasting of chocolate beans", ROASTING, 2);                 /* 2. */
-machine shelling("Removing cocoa beans' shells", SHELLING, 2);                /* 3. */
-machine grinding("Grinding of cocoa nibs or chocolate paste", GRINDING, 3);   /* 4. & 9. */
-machine refining("Refining of cocoa brash/chocolate paste", REFINING, 3);     /* 5. & 10. */
-machine defatting("Defatting of cocoa liquor", DEFATTING, 2);                 /* 6. */
-machine cake_grinding("Grinding of cocoa press cake", CAKE_GRINDING, 2);      /* 7. */
-machine remixing("Chocolate paste remixing", REMIXING, 2);                    /* 8. */
-machine conching("Chocolate paste conching", CONCHING, 2);                    /* 11. */
-machine tempering("Chocolate tempering", TEMPERING, 2);                       /* 12. */
-machine molding("Chocolate molding into blocks", MOLDING, 2);                 /* 13. */
+machine cleaning("- Cleaning machine [step #1]", CLEANING, 2);                        /* 1. */
+machine roasting("- Roasting machine [step #2]", ROASTING, 2);                        /* 2. */
+machine shelling("- Shelling machine [step #3]", SHELLING, 2);                        /* 3. */
+machine grinding("- Grinding machine [step #4 & #9]", GRINDING, 3);                   /* 4. & 9. */
+machine refining("- Refining machine [step #5 & 10]", REFINING, 3);                   /* 5. & 10. */
+machine defatting("- Defatting machine [step #6]", DEFATTING, 2);                     /* 6. */
+machine cake_grinding("- Press cake grinding machine [step #7]", CAKE_GRINDING, 2);   /* 7. */
+machine remixing("- Remixing machine [step #8]", REMIXING, 2);                        /* 8. */
+machine conching("- Conching machine [step #11]", CONCHING, 2);                       /* 11. */
+machine tempering("- Tempering machine [step #12]", TEMPERING, 2);                    /* 12. */
+machine molding("- Molding machine [step #13]", MOLDING, 2);                          /* 13. */
 
 /* Packing does not have maintenance, therefore simple Facility is sufficient. */
-Facility packing("Chocolate blocks packing");                                 /* 14. */
+Facility packing("Packing facility [step #14]");                                      /* 14. */
 
 // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 
@@ -728,12 +738,16 @@ batch::batch(enum chocolate_type type, Priority_t priority) : Process(priority)
 }}}
 
 
-class order;
+class order;          /* To solve cross-references of machine & machine_maintenance classes. */
+
+
 /**
  * Behaviour of chocolate creating batch process. (Required definition of virtual method.)
  */
 void batch::Behavior(void)
 {{{
+  this->start_time = Time;
+
   /* 1. */
   Seize(cleaning);
   Wait(Uniform(machine_oper_time[CLEANING][MIN], machine_oper_time[CLEANING][MAX]));
@@ -837,6 +851,9 @@ void batch::Behavior(void)
 
   
   this->p_store->deposit(this->quantity);     /* Storing produced chocolate. */
+  
+  batches_systime(Time - this->start_time);
+  global_machine_runtime += (Time - this->start_time);
   
   if (this->p_orders_queue->Empty() == false) {
     Entity *p_next = this->p_orders_queue->GetFirst();
@@ -1242,7 +1259,30 @@ int main(int argc, char* argv[])
   milk_store_stat.Output();
   dark_store_stat.Output();
 
-  Print("\n\n");
+  Print("\n\n+----------------------------------------------------------+\n");
+  Print("|                  MACHINES statistics:                    |\n");
+  Print("+----------------------------------------------------------+\n\n");
+  Print("Line's total running time: \t%u (in minutes)\n", static_cast<unsigned>(global_machine_runtime));
+  Print("Line's total maintenance time: \t%u (in minutes)\n\n", static_cast<unsigned>(global_maintenance_time));
+
+  batches_systime.Output();
+
+  Print("\n");
+  Print("+----------------------------------------------------------+\n");
+  Print("                 Each MACHINE usage data:                   \n");
+  
+  cleaning.Output();
+  roasting.Output();
+  shelling.Output();
+  grinding.Output();
+  refining.Output();
+  defatting.Output();
+  cake_grinding.Output();
+  remixing.Output();
+  conching.Output();
+  tempering.Output();
+  molding.Output();
+  packing.Output();
 
   // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 
