@@ -1187,7 +1187,7 @@ int main(int argc, char* argv[])
   dark_orders_queue.Output();
 
   Print("\n\n+----------------------------------------------------------+\n");
-  Print("                      STORE statistics:                       \n");
+  Print("|                     STORE statistics:                    |\n");
   Print("+----------------------------------------------------------+\n");
   Print("\n");
   Print("Number of drops below MINIMAL REQUIRED value of each store:\n");
@@ -1227,6 +1227,14 @@ int main(int argc, char* argv[])
                         store_statistics[NORM_BATCH_INIT][MILK], store_statistics[NORM_BATCH_INIT][DARK]);
 
   Print("\n\n");
+  Print("Total numbers for STORES:\n");
+  Print("-------------------------\n");
+  Print("# of total drops below REQUIRED MINIMUM:\t\t%u\n", store_statistics[BELOW_MIN][GLOBAL]);
+  Print("# of total drops below IDEAL value (without REQ. MIN.):\t%u\n", store_statistics[IDEAL_MIN][GLOBAL]);
+  Print("# of total PRIORITY chocolate batches created:\t\t%u\n", store_statistics[PRIOR_BATCH_INIT][GLOBAL]);
+  Print("# of total   NORMAL chocolate batches created:\t\t%u\n", store_statistics[NORM_BATCH_INIT][GLOBAL]);
+
+  Print("\n\n");
   Print("+----------------------------------------------------------+\n");
   Print("                    Each STORE usage:                       \n");
   
@@ -1235,7 +1243,6 @@ int main(int argc, char* argv[])
   dark_store_stat.Output();
 
   Print("\n\n");
-
 
   // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 
