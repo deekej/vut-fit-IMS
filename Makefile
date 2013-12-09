@@ -58,5 +58,5 @@ simulation3: IMS2013_3
 
 # Remove object files generated during compiling.
 clean:
-	rm -f *.o IMS2013
+	rm -f *.o IMS2013_*
 
