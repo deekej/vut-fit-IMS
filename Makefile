@@ -29,10 +29,14 @@ IMS2013: choco_fact_sim.cc
 # Other useful stuff:
 ############################################################
 
-#Rule to mark "false-positive" targets in project folder.
-.PHONY: clean
+# Rule to mark "false-positive" targets in project folder.
+.PHONY: run clean
 
-#Remove object files generated during compiling.
+# Run the initial (basic) simulation.
+run: IMS2013
+	./IMS2013
+
+# Remove object files generated during compiling.
 clean:
 	rm -f *.o IMS2013
 
