@@ -311,6 +311,15 @@ enum orders_statistics_index {
   NEW_BATCH,
 };
 
+enum store_statistics_index {
+  EMPTIED = 0,
+  BELOW_MIN,
+  IDEAL_MIN,
+  PRIOR_BATCH_INIT,
+  NORM_BATCH_INIT,
+  LONGEST_EMPTY_TIME,
+};
+
 
 /*
  * We're using chocolate type enumeration for indexing 2nd dimension of the array.
@@ -326,8 +335,27 @@ static unsigned orders_statistics[][4] = {
 };
 
 
+/*
+ * We're using chocolate type enumeration for indexing 2nd dimension of the array.
+ */
+static unsigned store_statistics[][4] = {
+  {0, 0, 0, 0},           /* EMPTIED */
+  {0, 0, 0, 0},           /* BELOW_MIN */
+  {0, 0, 0, 0},           /* IDEAL_MIN */
+  {0, 0, 0, 0},           /* PRIOR_BATCH_INIT */
+  {0, 0, 0, 0},           /* NORM_BATCH_INIT */
+  {0, 0, 0, 0},           /* LONGEST_EMPTY_TIME */
+};
+
+
 /* Histograms. */
 Histogram orders_systime("of 30 days (time the orders spent in system):", 0, 1440, 30);
+
+/* Statistics. */
+Stat white_store_stat("- WHITE chocolate storage:");
+Stat milk_store_stat("- MILK chocolate storage");
+Stat dark_store_stat("- DARK chocolate storage");
+
 
 /* *********************************************************************************************************************************************************** *
  ~ ~~~[ QUEUES ]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
@@ -392,8 +420,13 @@ class storehouse : public Facility {
     enum chocolate_type store_type;             /* Type of chocolate stored here. */
     Queue *p_queue;
 
+    bool store_empty;
+    double empty_time_start;
+    double longest_empty_time;
+
   public:
     unsigned act_capacity;                      /* Actual capacity of this store */
+
 
     /**
      * Storehouse constructor.
@@ -403,6 +436,15 @@ class storehouse : public Facility {
       this->store_type = type;
       this->max_capacity = max_cap;
       this->act_capacity = init_cap;
+      this->longest_empty_time = 0;
+
+      if (init_cap == 0x0) {
+        this->empty_time_start = 0;
+        this->store_empty = true;
+      }
+      else {
+        this->store_empty = false;
+      }
 
       switch (this->store_type) {
         case WHITE :
@@ -424,6 +466,7 @@ class storehouse : public Facility {
       return;
     }}}
 
+
     /**
      * Only way how to access private member of this class and increase actual capacity.
      */
@@ -431,8 +474,38 @@ class storehouse : public Facility {
     {{{
       this->act_capacity += amount;
 
+      /* Statistics. */
+      switch (this->store_type) {
+        case WHITE :
+          white_store_stat(this->act_capacity);
+          break;
+          
+        case MILK :
+          milk_store_stat(this->act_capacity);
+          break;
+
+        case DARK :
+          dark_store_stat(this->act_capacity);
+          break;
+
+        default :
+          break;
+      };
+
+      if (this->store_empty == true) {
+        double interval = Time - this->empty_time_start;
+
+        if (interval > this->longest_empty_time) {
+          this->longest_empty_time = interval;
+          store_statistics[LONGEST_EMPTY_TIME][this->store_type] = static_cast<unsigned>(interval);
+        }
+
+        this->store_empty = false;
+      }
+
       return;
     }}}
+
 
     /**
      * Only way how to withdraw given amount of chocolate from storehouse.
@@ -454,19 +527,60 @@ class storehouse : public Facility {
         return EXIT_FAILURE;            /* This amount can't be currently withdraw. */
       }
 
+
       this->act_capacity -= amount;
 
-      double percentage = static_cast<double>(this->act_capacity) / static_cast<double>(this->max_capacity) * 100;
+      if (this->act_capacity == 0x0) {
+        this->store_empty = true;
+        this->empty_time_start = Time;
+
+        store_statistics[EMPTIED][this->store_type]++;
+      }
 
       if (this->p_queue->Empty() == true) {
+
+        double percentage = static_cast<double>(this->act_capacity) / static_cast<double>(this->max_capacity) * 100;
+
         if (percentage < store_occupancy[this->store_type][MIN_OCCUPANCY]) {
-            (new batch(this->store_type, 1))->Activate();     /* Actual capacity is too low, creating preferred batch. */
+          (new batch(this->store_type, 1))->Activate();     /* Actual capacity is too low, creating preferred batch. */
+
+          store_statistics[PRIOR_BATCH_INIT][this->store_type]++;
+          store_statistics[PRIOR_BATCH_INIT][GLOBAL]++;
+
+          store_statistics[BELOW_MIN][this->store_type]++;
+          store_statistics[BELOW_MIN][GLOBAL]++;
         }
 
         if (percentage < store_occupancy[this->store_type][ADEQUATE_OCCUPANCY]) {
-            (new batch(this->store_type, 0))->Activate();     /* Actual capacity is below adequate limit, creating normal batch. */
+          (new batch(this->store_type, 0))->Activate();     /* Actual capacity is below adequate limit, creating normal batch. */
+
+          store_statistics[NORM_BATCH_INIT][this->store_type]++;
+          store_statistics[NORM_BATCH_INIT][GLOBAL]++;
+
+          if (percentage >= store_occupancy[this->store_type][MIN_OCCUPANCY]) {
+            store_statistics[IDEAL_MIN][this->store_type]++;
+            store_statistics[IDEAL_MIN][GLOBAL]++;
+          }
         }
       }
+
+      /* Statistics. */
+      switch (this->store_type) {
+        case WHITE :
+          white_store_stat(this->act_capacity);
+          break;
+          
+        case MILK :
+          milk_store_stat(this->act_capacity);
+          break;
+
+        case DARK :
+          dark_store_stat(this->act_capacity);
+          break;
+
+        default :
+          break;
+      };
 
       return EXIT_SUCCESS;
     }}}
@@ -1071,6 +1185,54 @@ int main(int argc, char* argv[])
   white_orders_queue.Output();
   milk_orders_queue.Output();
   dark_orders_queue.Output();
+
+  Print("\n\n+----------------------------------------------------------+\n");
+  Print("                      STORE statistics:                       \n");
+  Print("+----------------------------------------------------------+\n");
+  Print("\n");
+  Print("Number of drops below MINIMAL REQUIRED value of each store:\n");
+  Print("-----------------------------------------------------------\n");
+  Print("WHITE choc.: %u\t\tMILK choc.: %u\t\tDARK choc.: %u\n", store_statistics[BELOW_MIN][WHITE],
+                              store_statistics[BELOW_MIN][MILK], store_statistics[BELOW_MIN][DARK]);
+
+  Print("\n\n");
+  Print("Number of drops below IDEAL value of each store:\n");
+  Print("(Drops below MINIMAL REQUIRED value are counted separately.)\n");
+  Print("------------------------------------------------------------\n");
+  Print("WHITE choc.: %u\t\tMILK choc.: %u\t\tDARK choc.: %u\n", store_statistics[IDEAL_MIN][WHITE],
+                              store_statistics[IDEAL_MIN][MILK], store_statistics[IDEAL_MIN][DARK]);
+
+  Print("\n\n");
+  Print("Number of times when each store was completely emptied:\n");
+  Print("-------------------------------------------------------\n");
+  Print("WHITE choc.: %u\t\tMILK choc.: %u\t\tDARK choc.: %u\n", store_statistics[EMPTIED][WHITE],
+                                store_statistics[EMPTIED][MILK], store_statistics[EMPTIED][DARK]);
+
+  Print("\n\n");
+  Print("Longest empty time of each store (in minutes):\n");
+  Print("----------------------------------------------\n");
+  Print("WHITE choc.: %u\tMILK choc.: %u\tDARK choc.: %u\n", store_statistics[LONGEST_EMPTY_TIME][WHITE],
+                 store_statistics[LONGEST_EMPTY_TIME][MILK], store_statistics[LONGEST_EMPTY_TIME][DARK]);
+
+  Print("\n\n");
+  Print("Number of times when each store initiated creating\nof new chocolate batch with INCREASED priority:\n");
+  Print("--------------------------------------------------\n");
+  Print("WHITE choc.: %u\t\tMILK choc.: %u\t\tDARK choc.: %u\n", store_statistics[PRIOR_BATCH_INIT][WHITE],
+                       store_statistics[PRIOR_BATCH_INIT][MILK], store_statistics[PRIOR_BATCH_INIT][DARK]);
+
+  Print("\n\n");
+  Print("Number of times when each store initiated creating\nof new chocolate batch with NORMAL priority:\n");
+  Print("--------------------------------------------------\n");
+  Print("WHITE choc.: %u\t\tMILK choc.: %u\t\tDARK choc.: %u\n", store_statistics[NORM_BATCH_INIT][WHITE],
+                        store_statistics[NORM_BATCH_INIT][MILK], store_statistics[NORM_BATCH_INIT][DARK]);
+
+  Print("\n\n");
+  Print("+----------------------------------------------------------+\n");
+  Print("                    Each STORE usage:                       \n");
+  
+  white_store_stat.Output();
+  milk_store_stat.Output();
+  dark_store_stat.Output();
 
   Print("\n\n");
 
