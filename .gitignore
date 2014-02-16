@@ -3,4 +3,5 @@
 
 # Ignoring shared DROPBOX folder + project binary files:
 Dropbox
-IMS2013
+runs_results
+doc
