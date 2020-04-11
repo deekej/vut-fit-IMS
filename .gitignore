@@ -3,5 +3,3 @@
 
 # Ignoring shared DROPBOX folder + project binary files:
 Dropbox
-runs_results
-doc
