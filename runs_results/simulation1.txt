@@ -1,0 +1,529 @@
++------------------------------------------------------------------------------+
+|                   Hypothetical chocolate factory simulation                  |
++------------------------------------------------------------------------------+
+                            Simulation PARAMETERS:                              
++------------------------------------------------------------------------------+
+
+New orders generation interval:       60 minutes with exponential distribution
+Simulation time:                 100 000 minutes (~70 days)
+
++==============================================================================+
+Order probability of each chocolate type:
+White choc.: 13%	Milk choc.: 49%		Dark choc.: 38%
++------------------------------------------------------------------------------+
+Probability of customer leaving system if there isn't enough chocolate in store:
+White choc.: 17%	Milk choc.: 26%		Dark choc.: 21%
++------------------------------------------------------------------------------+
+Probability of customer buying redeeming the chocolate stock:
+White choc.: 31%	Milk choc.: 28%		Dark choc.: 30%
++------------------------------------------------------------------------------+
+Probability of customer informing himself about order waiting times:
+White choc.: 52%	Milk choc.: 46%		Dark choc.: 49%
++------------------------------------------------------------------------------+
+Probability of customer leaving due too long waiting times:
+White choc.: 27%	Milk choc.: 33%		Dark choc.: 29%
++------------------------------------------------------------------------------+
+Probability of customer eventually creating new order:
+White choc.: 73%	Milk choc.: 67%		Dark choc.: 71%
++------------------------------------------------------------------------------+
+
+NOTE: See the Petri Net visualization to see the customers' deciding process.
+
+===============================================================================+
+STORES hypothetical capacities (used for calculation of occupancy):
+White choc.: 750 pcs	Milk choc.: 2000 pcs	Dark choc.: 1500 pcs
++------------------------------------------------------------------------------+
+STORES minimal required occupancy:
+White choc.: 20%	Milk choc.: 25%		Dark choc.: 20%
++------------------------------------------------------------------------------+
+STORES ideal occupancy:
+White choc.: 30%	Milk choc.: 75%		Dark choc.: 70%
++------------------------------------------------------------------------------+
+
+      To see operation & maintenance times of each machine (facility) in the
+NOTE: new chocolate batch creation process, see the 2nd page of Petri net in
+      documentation.
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+                            Simulation run RESULTS:                             
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Number of customers interested in:
+----------------------------------
+WHITE choc.: 77		MILK choc.: 201		DARK choc.: 163
+
+
+Number of customers immediately discharged:
+-------------------------------------------
+WHITE choc.: 7		MILK choc.: 22		DARK choc.: 58
+
+
+Number of customers who fully redeeming the chocolate stock:
+------------------------------------------------------------
+WHITE choc.: 5		MILK choc.: 11		DARK choc.: 8
+
+
+Number of customers who immediately left to try competition:
+------------------------------------------------------------
+WHITE choc.: 30		MILK choc.: 94		DARK choc.: 41
+
+
+Number of customers who left to try competition after hearing
+the waiting times:
+-------------------------------------------------------------
+WHITE choc.: 6		MILK choc.: 20		DARK choc.: 13
+
+
+Number of customers who decided to create new order:
+----------------------------------------------------
+WHITE choc.: 29		MILK choc.: 54		DARK choc.: 43
+
+
+Number of orders which eventually created new batch in the system:
+------------------------------------------------------------------
+WHITE choc.: 7		MILK choc.: 14		DARK choc.: 15
+
+
+Total numbers:
+--------------
+# of customers:						441
+# of immediately discharged customers:			87
+# of customers who redeemed chocolate stock:		24
+# of customers who immediately left to for competition:	165
+# of customers who left to for competition afterwards:	39
+# of customers who created new order:			126
+# of orders which created new chocolate batches:	36
+
+
++----------------------------------------------------------+
+| HISTOGRAM of 30 days (time the orders spent in system):  |
++----------------------------------------------------------+
+| STATISTIC                                                |
++----------------------------------------------------------+
+|  Min = 84.8264                 Max = 56070.9             |
+|  Number of records = 109                                 |
+|  Average value = 14853.5                                 |
+|  Standard deviation = 10702                              |
++----------------------------------------------------------+
+|    from    |     to     |     n    |   rel    |   sum    |
++------------+------------+----------+----------+----------+
+|      0.000 |   1440.000 |        7 | 0.064220 | 0.064220 |
+|   1440.000 |   2880.000 |        7 | 0.064220 | 0.128440 |
+|   2880.000 |   4320.000 |        7 | 0.064220 | 0.192661 |
+|   4320.000 |   5760.000 |        2 | 0.018349 | 0.211009 |
+|   5760.000 |   7200.000 |        4 | 0.036697 | 0.247706 |
+|   7200.000 |   8640.000 |        4 | 0.036697 | 0.284404 |
+|   8640.000 |  10080.000 |        6 | 0.055046 | 0.339450 |
+|  10080.000 |  11520.000 |        4 | 0.036697 | 0.376147 |
+|  11520.000 |  12960.000 |        5 | 0.045872 | 0.422018 |
+|  12960.000 |  14400.000 |        7 | 0.064220 | 0.486239 |
+|  14400.000 |  15840.000 |        9 | 0.082569 | 0.568807 |
+|  15840.000 |  17280.000 |       11 | 0.100917 | 0.669725 |
+|  17280.000 |  18720.000 |        9 | 0.082569 | 0.752294 |
+|  18720.000 |  20160.000 |        3 | 0.027523 | 0.779817 |
+|  20160.000 |  21600.000 |        4 | 0.036697 | 0.816514 |
+|  21600.000 |  23040.000 |        2 | 0.018349 | 0.834862 |
+|  23040.000 |  24480.000 |        2 | 0.018349 | 0.853211 |
+|  24480.000 |  25920.000 |        2 | 0.018349 | 0.871560 |
+|  25920.000 |  27360.000 |        2 | 0.018349 | 0.889908 |
+|  27360.000 |  28800.000 |        4 | 0.036697 | 0.926606 |
+|  28800.000 |  30240.000 |        1 | 0.009174 | 0.935780 |
+|  30240.000 |  31680.000 |        0 | 0.000000 | 0.935780 |
+|  31680.000 |  33120.000 |        2 | 0.018349 | 0.954128 |
+|  33120.000 |  34560.000 |        0 | 0.000000 | 0.954128 |
+|  34560.000 |  36000.000 |        0 | 0.000000 | 0.954128 |
+|  36000.000 |  37440.000 |        0 | 0.000000 | 0.954128 |
+|  37440.000 |  38880.000 |        0 | 0.000000 | 0.954128 |
+|  38880.000 |  40320.000 |        1 | 0.009174 | 0.963303 |
+|  40320.000 |  41760.000 |        0 | 0.000000 | 0.963303 |
+|  41760.000 |  43200.000 |        2 | 0.018349 | 0.981651 |
++------------+------------+----------+----------+----------+
+
+
++----------------------------------------------------------+
+                   Each queue statistics:                   
++----------------------------------------------------------+
+| QUEUE - WHITE chocolate orders:                          |
++----------------------------------------------------------+
+|  Time interval = 0 - 100000                              |
+|  Incoming  34                                            |
+|  Outcoming  27                                           |
+|  Current length = 7                                      |
+|  Maximal length = 18                                     |
+|  Average length = 7.31514                                |
+|  Minimal time = 2122.57                                  |
+|  Maximal time = 54475.9                                  |
+|  Average time = 23778.1                                  |
++----------------------------------------------------------+
++----------------------------------------------------------+
+| QUEUE - MILK chocolate orders:                           |
++----------------------------------------------------------+
+|  Time interval = 0 - 100000                              |
+|  Incoming  64                                            |
+|  Outcoming  59                                           |
+|  Current length = 5                                      |
+|  Maximal length = 17                                     |
+|  Average length = 6.78777                                |
+|  Minimal time = 1058.65                                  |
+|  Maximal time = 23312.4                                  |
+|  Average time = 11081                                    |
++----------------------------------------------------------+
++----------------------------------------------------------+
+| QUEUE - DARK chocolate orders:                           |
++----------------------------------------------------------+
+|  Time interval = 0 - 100000                              |
+|  Incoming  49                                            |
+|  Outcoming  44                                           |
+|  Current length = 5                                      |
+|  Maximal length = 19                                     |
+|  Average length = 3.73202                                |
+|  Minimal time = 84.8264                                  |
+|  Maximal time = 18019.8                                  |
+|  Average time = 7948.61                                  |
++----------------------------------------------------------+
+
+
++----------------------------------------------------------+
+|                     STORE statistics:                    |
++----------------------------------------------------------+
+
+Number of drops below MINIMAL REQUIRED value of each store:
+-----------------------------------------------------------
+WHITE choc.: 4		MILK choc.: 23		DARK choc.: 57
+
+
+Number of drops below IDEAL value of each store:
+(Drops below MINIMAL REQUIRED value are counted separately.)
+------------------------------------------------------------
+WHITE choc.: 1		MILK choc.: 0		DARK choc.: 4
+
+
+Number of times when each store was completely emptied:
+-------------------------------------------------------
+WHITE choc.: 5		MILK choc.: 11		DARK choc.: 10
+
+
+Longest empty time of each store (in minutes):
+----------------------------------------------
+WHITE choc.: 35955	MILK choc.: 24794	DARK choc.: 10563
+
+
+Number of times when each store initiated creating
+of new chocolate batch with INCREASED priority:
+--------------------------------------------------
+WHITE choc.: 4		MILK choc.: 23		DARK choc.: 57
+
+
+Number of times when each store initiated creating
+of new chocolate batch with NORMAL priority:
+--------------------------------------------------
+WHITE choc.: 5		MILK choc.: 23		DARK choc.: 61
+
+
+Total numbers for STORES:
+-------------------------
+# of total drops below REQUIRED MINIMUM:		84
+# of total drops below IDEAL value (without REQ. MIN.):	5
+# of total PRIORITY chocolate batches created:		84
+# of total   NORMAL chocolate batches created:		89
+
+
++----------------------------------------------------------+
+                    Each STORE usage:                       
++----------------------------------------------------------+
+| STATISTIC - WHITE chocolate storage:                     |
++----------------------------------------------------------+
+|  Min = 0                       Max = 275                 |
+|  Number of records = 40                                  |
+|  Average value = 114.6                                   |
++----------------------------------------------------------+
++----------------------------------------------------------+
+| STATISTIC - MILK chocolate storage                       |
++----------------------------------------------------------+
+|  Min = 0                       Max = 446                 |
+|  Number of records = 95                                  |
+|  Average value = 125.832                                 |
++----------------------------------------------------------+
++----------------------------------------------------------+
+| STATISTIC - DARK chocolate storage                       |
++----------------------------------------------------------+
+|  Min = 0                       Max = 441                 |
+|  Number of records = 121                                 |
+|  Average value = 141.926                                 |
+|  Standard deviation = 104.764                            |
++----------------------------------------------------------+
+
+
++----------------------------------------------------------+
+|                  MACHINES statistics:                    |
++----------------------------------------------------------+
+
+Line's total running time: 	1713926 (in minutes)
+Line's total maintenance time: 	47052 (in minutes)
+
++----------------------------------------------------------+
+| HISTOGRAM of 10 weeks (time the batches spent in system) |
++----------------------------------------------------------+
+| STATISTIC                                                |
++----------------------------------------------------------+
+|  Min = 3216.13                 Max = 87193.5             |
+|  Number of records = 36                                  |
+|  Average value = 47609.1                                 |
++----------------------------------------------------------+
+|    from    |     to     |     n    |   rel    |   sum    |
++------------+------------+----------+----------+----------+
+|      0.000 |  10080.000 |        4 | 0.111111 | 0.111111 |
+|  10080.000 |  20160.000 |        2 | 0.055556 | 0.166667 |
+|  20160.000 |  30240.000 |        4 | 0.111111 | 0.277778 |
+|  30240.000 |  40320.000 |        5 | 0.138889 | 0.416667 |
+|  40320.000 |  50400.000 |        3 | 0.083333 | 0.500000 |
+|  50400.000 |  60480.000 |        5 | 0.138889 | 0.638889 |
+|  60480.000 |  70560.000 |        5 | 0.138889 | 0.777778 |
+|  70560.000 |  80640.000 |        4 | 0.111111 | 0.888889 |
+|  80640.000 |  90720.000 |        4 | 0.111111 | 1.000000 |
+|  90720.000 | 100800.000 |        0 | 0.000000 | 1.000000 |
++------------+------------+----------+----------+----------+
+
+
++----------------------------------------------------------+
+                 Each MACHINE usage data:                   
++----------------------------------------------------------+
+| FACILITY - Cleaning machine [step #1]                    |
++----------------------------------------------------------+
+|  Status = not BUSY                                       |
+|  Time interval = 0 - 100000                              |
+|  Number of requests = 418                                |
+|  Average utilization = 0.110281                          |
++----------------------------------------------------------+
+  Input queue '- Cleaning machine [step #1].Q1'
++----------------------------------------------------------+
+| QUEUE Q1                                                 |
++----------------------------------------------------------+
+|  Time interval = 0 - 100000                              |
+|  Incoming  310                                           |
+|  Outcoming  310                                          |
+|  Current length = 0                                      |
+|  Maximal length = 10                                     |
+|  Average length = 0.21259                                |
+|  Minimal time = 2.22724                                  |
+|  Maximal time = 620.197                                  |
+|  Average time = 68.5773                                  |
+|  Standard deviation = 106.848                            |
++----------------------------------------------------------+
+
++----------------------------------------------------------+
+| FACILITY - Roasting machine [step #2]                    |
++----------------------------------------------------------+
+|  Status = not BUSY                                       |
+|  Time interval = 0 - 100000                              |
+|  Number of requests = 418                                |
+|  Average utilization = 0.255019                          |
++----------------------------------------------------------+
+  Input queue '- Roasting machine [step #2].Q1'
++----------------------------------------------------------+
+| QUEUE Q1                                                 |
++----------------------------------------------------------+
+|  Time interval = 0 - 100000                              |
+|  Incoming  329                                           |
+|  Outcoming  329                                          |
+|  Current length = 0                                      |
+|  Maximal length = 13                                     |
+|  Average length = 0.719819                               |
+|  Minimal time = 3.76792                                  |
+|  Maximal time = 2949.8                                   |
+|  Average time = 218.79                                   |
+|  Standard deviation = 429.986                            |
++----------------------------------------------------------+
+
++----------------------------------------------------------+
+| FACILITY - Shelling machine [step #3]                    |
++----------------------------------------------------------+
+|  Status = not BUSY                                       |
+|  Time interval = 0 - 100000                              |
+|  Number of requests = 250                                |
+|  Average utilization = 0.0504682                         |
++----------------------------------------------------------+
+  Input queue '- Shelling machine [step #3].Q1'
++----------------------------------------------------------+
+| QUEUE Q1                                                 |
++----------------------------------------------------------+
+|  Time interval = 0 - 100000                              |
+|  Incoming  5                                             |
+|  Outcoming  5                                            |
+|  Current length = 0                                      |
+|  Maximal length = 1                                      |
+|  Average length = 0.000244567                            |
+|  Minimal time = 1.6231                                   |
+|  Maximal time = 11.809                                   |
+|  Average time = 4.89135                                  |
++----------------------------------------------------------+
+
++----------------------------------------------------------+
+| FACILITY - Grinding machine [step #4 & #9]               |
++----------------------------------------------------------+
+|  Status = not BUSY                                       |
+|  Time interval = 0 - 100000                              |
+|  Number of requests = 1045                               |
+|  Average utilization = 0.170191                          |
++----------------------------------------------------------+
+  Input queue '- Grinding machine [step #4 & #9].Q1'
++----------------------------------------------------------+
+| QUEUE Q1                                                 |
++----------------------------------------------------------+
+|  Time interval = 0 - 100000                              |
+|  Incoming  287                                           |
+|  Outcoming  287                                          |
+|  Current length = 0                                      |
+|  Maximal length = 3                                      |
+|  Average length = 0.0365382                              |
+|  Minimal time = 0.299542                                 |
+|  Maximal time = 44.2392                                  |
+|  Average time = 12.7311                                  |
+|  Standard deviation = 8.30481                            |
++----------------------------------------------------------+
+
++----------------------------------------------------------+
+| FACILITY - Refining machine [step #5 & 10]               |
++----------------------------------------------------------+
+|  Status = not BUSY                                       |
+|  Time interval = 0 - 100000                              |
+|  Number of requests = 627                                |
+|  Average utilization = 0.304538                          |
++----------------------------------------------------------+
+  Input queue '- Refining machine [step #5 & 10].Q1'
++----------------------------------------------------------+
+| QUEUE Q1                                                 |
++----------------------------------------------------------+
+|  Time interval = 0 - 100000                              |
+|  Incoming  411                                           |
+|  Outcoming  411                                          |
+|  Current length = 0                                      |
+|  Maximal length = 9                                      |
+|  Average length = 0.412232                               |
+|  Minimal time = 0.245209                                 |
+|  Maximal time = 1018.38                                  |
+|  Average time = 100.3                                    |
+|  Standard deviation = 149.759                            |
++----------------------------------------------------------+
+
++----------------------------------------------------------+
+| FACILITY - Defatting machine [step #6]                   |
++----------------------------------------------------------+
+|  Status = not BUSY                                       |
+|  Time interval = 0 - 100000                              |
+|  Number of requests = 418                                |
+|  Average utilization = 0.158055                          |
++----------------------------------------------------------+
+  Input queue '- Defatting machine [step #6].Q1'
++----------------------------------------------------------+
+| QUEUE Q1                                                 |
++----------------------------------------------------------+
+|  Time interval = 0 - 100000                              |
+|  Incoming  151                                           |
+|  Outcoming  151                                          |
+|  Current length = 0                                      |
+|  Maximal length = 6                                      |
+|  Average length = 0.08164                                |
+|  Minimal time = 0.116327                                 |
+|  Maximal time = 372.813                                  |
+|  Average time = 54.0663                                  |
+|  Standard deviation = 72.1111                            |
++----------------------------------------------------------+
+
++----------------------------------------------------------+
+| FACILITY - Press cake grinding machine [step #7]         |
++----------------------------------------------------------+
+|  Status = not BUSY                                       |
+|  Time interval = 0 - 100000                              |
+|  Number of requests = 418                                |
+|  Average utilization = 0.0637105                         |
++----------------------------------------------------------+
+  Input queue '- Press cake grinding machine [step #7].Q1'
++----------------------------------------------------------+
+| QUEUE Q1                                                 |
++----------------------------------------------------------+
+|  Time interval = 0 - 100000                              |
+|  Incoming  7                                             |
+|  Outcoming  7                                            |
+|  Current length = 0                                      |
+|  Maximal length = 1                                      |
+|  Average length = 0.000120193                            |
+|  Minimal time = 0.133723                                 |
+|  Maximal time = 4.85906                                  |
+|  Average time = 1.71705                                  |
++----------------------------------------------------------+
+
++----------------------------------------------------------+
+| FACILITY - Remixing machine [step #8]                    |
++----------------------------------------------------------+
+|  Status = not BUSY                                       |
+|  Time interval = 0 - 100000                              |
+|  Number of requests = 418                                |
+|  Average utilization = 0.198483                          |
++----------------------------------------------------------+
+  Input queue '- Remixing machine [step #8].Q1'
++----------------------------------------------------------+
+| QUEUE Q1                                                 |
++----------------------------------------------------------+
+|  Time interval = 0 - 100000                              |
+|  Incoming  195                                           |
+|  Outcoming  195                                          |
+|  Current length = 0                                      |
+|  Maximal length = 3                                      |
+|  Average length = 0.0904976                              |
+|  Minimal time = 0.00859418                               |
+|  Maximal time = 329.38                                   |
+|  Average time = 46.409                                   |
+|  Standard deviation = 40.5062                            |
++----------------------------------------------------------+
+
++----------------------------------------------------------+
+| FACILITY - Conching machine [step #11]                   |
++----------------------------------------------------------+
+|  Status = BUSY                                           |
+|  Time interval = 0 - 100000                              |
+|  Number of requests = 73                                 |
+|  Average utilization = 0.995673                          |
++----------------------------------------------------------+
+  Input queue '- Conching machine [step #11].Q1'
++----------------------------------------------------------+
+| QUEUE Q1                                                 |
++----------------------------------------------------------+
+|  Time interval = 0 - 100000                              |
+|  Incoming  244                                           |
+|  Outcoming  72                                           |
+|  Current length = 172                                    |
+|  Maximal length = 173                                    |
+|  Average length = 101.358                                |
+|  Minimal time = 74                                       |
+|  Maximal time = 86482.9                                  |
+|  Average time = 23673.5                                  |
++----------------------------------------------------------+
+
++----------------------------------------------------------+
+| FACILITY - Tempering machine [step #12]                  |
++----------------------------------------------------------+
+|  Status = not BUSY                                       |
+|  Time interval = 0 - 100000                              |
+|  Number of requests = 72                                 |
+|  Average utilization = 0.0769827                         |
++----------------------------------------------------------+
+
++----------------------------------------------------------+
+| FACILITY - Molding machine [step #13]                    |
++----------------------------------------------------------+
+|  Status = not BUSY                                       |
+|  Time interval = 0 - 100000                              |
+|  Number of requests = 72                                 |
+|  Average utilization = 0.039566                          |
++----------------------------------------------------------+
+
++----------------------------------------------------------+
+| FACILITY Packing facility [step #14]                     |
++----------------------------------------------------------+
+|  Status = not BUSY                                       |
+|  Time interval = 0 - 100000                              |
+|  Number of requests = 36                                 |
+|  Average utilization = 0.035812                          |
++----------------------------------------------------------+
+
